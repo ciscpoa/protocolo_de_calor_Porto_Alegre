@@ -20,6 +20,11 @@ pelo GitHub Pages. Uma automação (GitHub Actions) refaz a previsão a cada 3 h
   conforme a largura, sem rolagem lateral. Tema claro e escuro.
 - A sensação térmica (UTCI), que aciona os gatilhos, é o número principal: quadro próprio com régua das faixas
   do protocolo e horas acima de 28, 34 e 38 °C; destaque nos cartões dos dias e no gráfico hora a hora.
+- Gráfico hora a hora com seletor de modelo (Consenso, ECMWF, GFS) e legenda clicável para mostrar ou
+  esconder linhas; fundo com as faixas: < 10 °C (azul), 10–28 °C (verde) e os limites do protocolo.
+- Chuva por hora dos dois modelos lado a lado, sem média, com legenda clicável.
+- Na publicação (GitHub Actions), `gerar_painel.py` carimba a versão nos endereços dos scripts
+  (`app.js?v=AAAAMMDDHHMM`), para o navegador não usar arquivos antigos guardados na memória.
 - Botão "Compartilhar este alerta" (WhatsApp ou menu de compartilhamento do celular) e imagem de prévia
   (`docs/img/compartilhar.png`) para links enviados em aplicativos.
 - Logos em `docs/img/`: barra institucional (DVS/SMS, SUS, Prefeitura de Porto Alegre) e marca do CISC.

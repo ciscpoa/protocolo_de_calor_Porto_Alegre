@@ -4,12 +4,16 @@ Baixa as previsões (ECMWF IFS e NOAA GFS, via Open-Meteo), calcula os índices 
 protocolo (gatilhos diários + persistência + rampa + acúmulo + rescaldo) e grava:
   docs/dados/previsao.js    lido pela página (window.PREVISAO)
   docs/dados/previsao.json  os mesmos dados, para reutilização
+No GitHub Actions (variável GITHUB_ACTIONS), também carimba a versão nos endereços dos scripts de
+docs/index.html (?v=AAAAMMDDHHMM), para o navegador não reaproveitar arquivos antigos da memória.
 Uso: python gerar_painel.py
 """
 from __future__ import annotations
 
 import json
 import math
+import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -71,6 +75,15 @@ def condicao_consenso(ec: dict, gf: dict) -> tuple[int, str]:
     return pior, (f"Possível {texto.lower()}" if pior in (51, 63, 95) else texto)
 
 
+def carimbar_versao(versao: str) -> None:
+    """Troca ?v=... nos endereços de app.js, dados/previsao.js e lib/d3.min.js do index.html."""
+    pagina = AQUI / "docs" / "index.html"
+    html = pagina.read_text(encoding="utf-8")
+    novo, n = re.subn(r'((?:app\.js|dados/previsao\.js|lib/d3\.min\.js)\?v=)[^"]*"', rf'\g<1>{versao}"', html)
+    pagina.write_text(novo, encoding="utf-8")
+    print(f"versão {versao} carimbada em {n} endereços de docs/index.html")
+
+
 def main() -> None:
     om = previsao.cliente(str(AQUI / ".cache_openmeteo"))
     pontos, centro = previsao.pontos_vizinhanca()
@@ -108,7 +121,6 @@ def main() -> None:
         dia_ec, dia_gf, dia_m = ec[ec["date"] == d], gf[gf["date"] == d], mme[mme["date"] == d]
         r_ec, r_gf = resumo_modelo(dia_ec, nmep["ecmwf"].get(d)), resumo_modelo(dia_gf, nmep["gfs"].get(d))
         codigo, condicao = condicao_consenso(r_ec, r_gf)
-        prob = [x for x in (r_ec["nmep_10"], r_gf["nmep_10"]) if x is not None]
         seta, direcao = protocolo.vento_predominante(pd.concat([dia_ec["wind_kmh"], dia_gf["wind_kmh"]]),
                                                      pd.concat([dia_ec["wind_dir"], dia_gf["wind_dir"]]))
         nivel = diag["nivel"]
@@ -124,8 +136,6 @@ def main() -> None:
             "temp": extremos(dia_m, "T2M_MME"), "sensacao": extremos(dia_m, "UTCI_MME"),
             "codigo": codigo, "condicao": condicao,
             "tempo": protocolo.estabilidade_publico(r_ec["estabilidade"], r_gf["estabilidade"]),
-            "chuva_mm": (r_ec["chuva_mm"] + r_gf["chuva_mm"]) / 2.0,
-            "chance_chuva_10mm": float(np.mean(prob)) if prob else None,
             "vento_max": max(r_ec["vento_max"], r_gf["vento_max"]), "rajada_max": max(r_ec["rajada_max"], r_gf["rajada_max"]),
             "vento_dir": direcao, "vento_seta": seta,
             "modelos": {"ecmwf": r_ec, "gfs": r_gf},
@@ -137,7 +147,7 @@ def main() -> None:
         "temp": mme["T2M_MME"].to_numpy()[f], "sensacao": mme["UTCI_MME"].to_numpy()[f],
         "sensacao_ecmwf": ec["utci"].to_numpy()[f], "sensacao_gfs": gf["utci"].to_numpy()[f],
         "temp_ecmwf": ec["t2m"].to_numpy()[f], "temp_gfs": gf["t2m"].to_numpy()[f],
-        "chuva": ((ec["precip_center"] + gf["precip_center"]) / 2.0).to_numpy()[f],
+        "chuva_ecmwf": ec["precip_center"].to_numpy()[f], "chuva_gfs": gf["precip_center"].to_numpy()[f],
         "umidade": ((ec["rh2m"] + gf["rh2m"]) / 2.0).to_numpy()[f],
         "vento": ((ec["wind_kmh"] + gf["wind_kmh"]) / 2.0).to_numpy()[f],
         "ibutg": mme["WBGT_MME"].to_numpy()[f],
@@ -152,13 +162,15 @@ def main() -> None:
     texto = json.dumps(dados, ensure_ascii=False, separators=(",", ":"))
     (SAIDA / "previsao.json").write_text(texto, encoding="utf-8")
     (SAIDA / "previsao.js").write_text(f"window.PREVISAO={texto};\n", encoding="utf-8")
+    if os.environ.get("GITHUB_ACTIONS") or "--carimbar" in sys.argv:
+        carimbar_versao(agora.strftime("%Y%m%d%H%M"))
 
     print(f"\nPrevisão gerada em {agora:%d/%m/%Y %H:%M} (ensemble: {'sim' if ensemble_ok else 'não'})")
     for x in anteriores:
         print(f"  (anterior) {x['data']}  N{x['nivel']}  | {x['gatilho']}")
     for x in saida_dias:
         print(f"  {x['dia_semana']:<8} {x['data']}  N{x['nivel']} {x['nome']:<11} Tmáx {x['temp']['max']:4.1f}  "
-              f"UTCI máx {x['sensacao']['max']:4.1f}  chuva {x['chuva_mm']:4.1f} mm  | {x['gatilho']}")
+              f"UTCI máx {x['sensacao']['max']:4.1f}  chuva EC {x['modelos']['ecmwf']['chuva_mm']:4.1f} / GFS {x['modelos']['gfs']['chuva_mm']:4.1f} mm  | {x['gatilho']}")
 
 
 if __name__ == "__main__":

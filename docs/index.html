@@ -22,7 +22,7 @@
   --plano: #f5f6f8; --superficie: #ffffff; --tinta: #0b0b0b; --tinta2: #52514e; --muda: #77756f;
   --grade: #e1e0d9; --eixo: #c3c2b7; --borda: rgba(11, 11, 11, 0.10); --lavagem: rgba(11, 11, 11, 0.045);
   --marca: #153489; --marca-escura: #0e2466; --marca-clara: #6eb0ff; --acento: #0769b2;
-  --temp: #8a8f99; --faixa-op: 0.16; --nuvem: #94a3b8; --nuvem2: #cbd5e1; --sol: #f59e0b; --gota: #0284c7; --raio: #e11d48;
+  --s1: #2a78d6; --s2: #eb6834; --faixa-op: 0.16; --nuvem: #94a3b8; --nuvem2: #cbd5e1; --sol: #f59e0b; --gota: #0284c7; --raio: #e11d48;
   --sombra: 0 4px 16px rgba(11, 11, 11, 0.10); --raio-cartao: 16px;
   --f-corpo: clamp(15px, 0.25vw + 14px, 17px);
 }
@@ -31,14 +31,14 @@
     color-scheme: dark;
     --plano: #0d0d0d; --superficie: #1a1a19; --tinta: #f0efec; --tinta2: #c3c2b7; --muda: #9a988f;
     --grade: #2c2c2a; --eixo: #383835; --borda: rgba(255, 255, 255, 0.10); --lavagem: rgba(255, 255, 255, 0.06);
-    --acento: #6eb0ff; --temp: #8a8f99; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --acento: #6eb0ff; --s1: #3987e5; --s2: #d95926; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --plano: #0d0d0d; --superficie: #1a1a19; --tinta: #f0efec; --tinta2: #c3c2b7; --muda: #9a988f;
   --grade: #2c2c2a; --eixo: #383835; --borda: rgba(255, 255, 255, 0.10); --lavagem: rgba(255, 255, 255, 0.06);
-  --acento: #6eb0ff; --temp: #8a8f99; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --acento: #6eb0ff; --s1: #3987e5; --s2: #d95926; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -148,6 +148,15 @@ h2 { font-size: clamp(18px, 0.6vw + 15px, 23px); margin: clamp(22px, 3vw, 36px) 
 .btn-tabela { flex: none; border: 1px solid var(--borda); background: none; color: var(--tinta2); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
 .btn-tabela[aria-pressed="true"] { background: var(--lavagem); color: var(--tinta); }
 .legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--tinta2); margin: 0 0 6px; }
+.controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 0 10px; }
+.controles .rot { font-size: 13px; color: var(--tinta2); }
+.alternar { display: flex; flex-wrap: wrap; gap: 6px; }
+.alternar button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--borda); background: var(--superficie); color: var(--tinta);
+  border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+.alternar button:hover { background: var(--lavagem); }
+.alternar button[aria-pressed="false"] { color: var(--muda); background: none; }
+.alternar button[aria-pressed="false"] i { opacity: 0.25; }
+.segmentado.modelo { margin: 0; }
 .legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .k-linha { width: 18px; height: 2px; display: inline-block; border-radius: 1px; }
 .k-caixa { width: 12px; height: 12px; display: inline-block; border-radius: 3px; }
@@ -237,21 +246,27 @@ footer a { color: #9cc8ff; }
       <div class="cartao-topo">
         <div>
           <h3>A sensação térmica (linha preta) é o que aciona os alertas</h3>
-          <p class="nota">A sensação térmica (índice UTCI) junta temperatura, umidade, vento e sol: é o calor que o corpo sente ao ar livre. As faixas coloridas são os limites do protocolo; o número em cada dia é o pico da sensação.</p>
+          <p class="nota">A sensação térmica (índice UTCI) junta temperatura, umidade, vento e sol: é o calor que o corpo sente ao ar livre. As faixas coloridas são os limites do protocolo; o número em cada dia é o pico da sensação. Toque nos itens abaixo para mostrar ou esconder cada linha.</p>
         </div>
         <button class="btn-tabela" type="button" data-tabela="graf-calor" aria-pressed="false">Tabela</button>
       </div>
-      <div class="legenda" id="legenda-calor"></div>
+      <div class="controles">
+        <span class="rot">Modelo:</span>
+        <div class="segmentado modelo" id="modelo-calor" role="group" aria-label="Modelo do gráfico de sensação térmica"></div>
+        <div class="alternar" id="legenda-calor" role="group" aria-label="Mostrar ou esconder linhas"></div>
+      </div>
+      <div class="legenda" id="faixas-calor"></div>
       <div class="grafico" id="graf-calor"></div>
     </figure>
     <figure class="cartao" style="margin:0">
       <div class="cartao-topo">
         <div>
           <h3>Chuva prevista (mm por hora)</h3>
-          <p class="nota">Média dos dois modelos no centro de Porto Alegre.</p>
+          <p class="nota">Os dois modelos lado a lado, hora a hora, no centro de Porto Alegre. Toque em um modelo para mostrar ou esconder.</p>
         </div>
         <button class="btn-tabela" type="button" data-tabela="graf-chuva" aria-pressed="false">Tabela</button>
       </div>
+      <div class="controles"><div class="alternar" id="legenda-chuva" role="group" aria-label="Mostrar ou esconder modelos"></div></div>
       <div class="grafico" id="graf-chuva"></div>
     </figure>
   </div>
@@ -277,7 +292,7 @@ footer a { color: #9cc8ff; }
   </div>
 
   <details class="tecnico" id="tecnico">
-    <summary>Detalhes técnicos (para profissionais)</summary>
+    <summary>Detalhes técnicos</summary>
     <p>Valores mínimos e máximos de cada dia, por modelo, com o horário entre parênteses. Cores das faixas: as do protocolo (IBUTG em escala ocupacional, ISO 7243 e NR-15).</p>
     <div class="segmentado" id="modelo-tec" role="group" aria-label="Modelo"></div>
     <div class="vista-tabela" id="tabela-tec" style="max-height:none"></div>
@@ -307,8 +322,8 @@ footer a { color: #9cc8ff; }
   </div>
 </footer>
 <div id="tooltip" hidden></div>
-<script src="lib/d3.min.js"></script>
-<script src="dados/previsao.js"></script>
-<script src="app.js"></script>
+<script src="lib/d3.min.js?v=dev"></script>
+<script src="dados/previsao.js?v=dev"></script>
+<script src="app.js?v=dev"></script>
 </body>
 </html>
