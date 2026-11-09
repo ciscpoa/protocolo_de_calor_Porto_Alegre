@@ -1,0 +1,48 @@
+# Atualiza a previsão e republica o painel (GitHub Pages) a cada 3 horas.
+# Os dados novos não são gravados no histórico do repositório: vão direto para o site.
+name: Atualizar painel de calor
+
+on:
+  schedule:
+    - cron: "15 */3 * * *"   # 00:15, 03:15, ... (UTC)
+  workflow_dispatch:          # botão "Run workflow" na aba Actions
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Testar os gatilhos do protocolo
+        run: python -m pytest -q tests
+      - name: Gerar a previsão
+        run: python gerar_painel.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  publicar:
+    needs: gerar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
