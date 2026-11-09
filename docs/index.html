@@ -4,178 +4,261 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calor em Porto Alegre</title>
-<meta name="description" content="Previsão do tempo e alertas do Protocolo de Calor de Porto Alegre para os próximos 5 dias.">
+<meta name="description" content="Previsão do tempo e alertas do Protocolo de Calor de Porto Alegre para os próximos 5 dias, pela sensação térmica.">
+<meta name="theme-color" content="#153489">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Calor em Porto Alegre — previsão e alertas">
+<meta property="og:description" content="Nível de alerta do Protocolo de Calor, sensação térmica e o que fazer, para os próximos 5 dias.">
+<meta property="og:url" content="https://ciscpoa.github.io/protocolo_de_calor_Porto_Alegre/">
+<meta property="og:image" content="https://ciscpoa.github.io/protocolo_de_calor_Porto_Alegre/img/compartilhar.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="img/favicon-64.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <style>
 :root {
   color-scheme: light;
-  --plano: #f9f9f7; --superficie: #fcfcfb; --tinta: #0b0b0b; --tinta2: #52514e; --muda: #898781;
-  --grade: #e1e0d9; --eixo: #c3c2b7; --borda: rgba(11, 11, 11, 0.10); --lavagem: rgba(11, 11, 11, 0.04);
-  --s1: #2a78d6; --faixa-op: 0.16; --nuvem: #94a3b8; --nuvem2: #cbd5e1; --sol: #f59e0b; --gota: #0284c7; --raio: #e11d48;
-  --sombra: 0 4px 16px rgba(11, 11, 11, 0.10);
+  --plano: #f5f6f8; --superficie: #ffffff; --tinta: #0b0b0b; --tinta2: #52514e; --muda: #77756f;
+  --grade: #e1e0d9; --eixo: #c3c2b7; --borda: rgba(11, 11, 11, 0.10); --lavagem: rgba(11, 11, 11, 0.045);
+  --marca: #153489; --marca-escura: #0e2466; --marca-clara: #6eb0ff; --acento: #0769b2;
+  --temp: #8a8f99; --faixa-op: 0.16; --nuvem: #94a3b8; --nuvem2: #cbd5e1; --sol: #f59e0b; --gota: #0284c7; --raio: #e11d48;
+  --sombra: 0 4px 16px rgba(11, 11, 11, 0.10); --raio-cartao: 16px;
+  --f-corpo: clamp(15px, 0.25vw + 14px, 17px);
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
-    --plano: #0d0d0d; --superficie: #1a1a19; --tinta: #f0efec; --tinta2: #c3c2b7; --muda: #898781;
-    --grade: #2c2c2a; --eixo: #383835; --borda: rgba(255, 255, 255, 0.10); --lavagem: rgba(255, 255, 255, 0.05);
-    --s1: #3987e5; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --plano: #0d0d0d; --superficie: #1a1a19; --tinta: #f0efec; --tinta2: #c3c2b7; --muda: #9a988f;
+    --grade: #2c2c2a; --eixo: #383835; --borda: rgba(255, 255, 255, 0.10); --lavagem: rgba(255, 255, 255, 0.06);
+    --acento: #6eb0ff; --temp: #8a8f99; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --plano: #0d0d0d; --superficie: #1a1a19; --tinta: #f0efec; --tinta2: #c3c2b7; --muda: #898781;
-  --grade: #2c2c2a; --eixo: #383835; --borda: rgba(255, 255, 255, 0.10); --lavagem: rgba(255, 255, 255, 0.05);
-  --s1: #3987e5; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --plano: #0d0d0d; --superficie: #1a1a19; --tinta: #f0efec; --tinta2: #c3c2b7; --muda: #9a988f;
+  --grade: #2c2c2a; --eixo: #383835; --borda: rgba(255, 255, 255, 0.10); --lavagem: rgba(255, 255, 255, 0.06);
+  --acento: #6eb0ff; --temp: #8a8f99; --faixa-op: 0.22; --nuvem: #64748b; --nuvem2: #94a3b8; --sombra: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--plano); color: var(--tinta); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-a { color: var(--s1); }
-.largura { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
-header { background: var(--superficie); border-bottom: 1px solid var(--borda); padding: 18px 0 16px; }
-.topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-h1 { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 700; }
-.sub { margin: 4px 0 0; color: var(--tinta2); font-size: 15px; }
-.atualizado { margin: 6px 0 0; color: var(--tinta2); font-size: 13px; }
-#tema { flex: none; border: 1px solid var(--borda); background: var(--superficie); color: var(--tinta2); border-radius: 8px;
-  padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
-main { padding: 18px 0 32px; }
-h2 { font-size: 19px; margin: 28px 0 12px; }
-.aviso-dados { background: #fef9c3; color: #713f12; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
-.cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 14px; padding: 18px 20px; min-width: 0; }
-/* destaque do dia */
-.destaque { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
-@media (max-width: 820px) { .destaque { grid-template-columns: minmax(0, 1fr); } }
-.alerta { border-radius: 14px; padding: 20px 22px; border: 1px solid rgba(0, 0, 0, 0.06); }
-.alerta .quando { font-size: 14px; font-weight: 600; opacity: 0.85; }
-.alerta .nivel { display: flex; align-items: baseline; gap: 12px; margin: 4px 0 6px; flex-wrap: wrap; }
-.alerta .nivel .num { font-size: 15px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.6); }
-.alerta .nivel .nome { font-size: 40px; font-weight: 750; line-height: 1.1; }
-.alerta .motivo { font-size: 16px; margin: 0 0 10px; }
-.alerta .janela { display: inline-block; font-weight: 700; font-size: 15px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; padding: 4px 10px; margin-bottom: 10px; }
-.alerta h3 { font-size: 15px; margin: 6px 0 4px; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--plano); color: var(--tinta); font: var(--f-corpo)/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--acento); }
+img { max-width: 100%; }
+.largura { width: min(100% - 32px, 1480px); margin-inline: auto; }
+
+/* faixa institucional e cabeçalho */
+.faixa-inst { background: #f7f7f7; border-bottom: 1px solid #e5e5e5; }
+.faixa-inst .largura { display: flex; align-items: center; padding-block: 8px; }
+.faixa-inst img { display: block; height: clamp(36px, 4.2vw, 54px); width: auto; }
+.cabecalho { background: linear-gradient(120deg, var(--marca-escura), var(--marca) 60%); color: #fff; }
+.cabecalho .largura { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-block: clamp(14px, 2vw, 24px); }
+.cabecalho .marca { flex: none; width: clamp(52px, 6vw, 84px); height: auto; }
+.cabecalho .titulos { flex: 1 1 200px; min-width: 0; }
+.cabecalho .sobre { margin: 0; font-size: 13px; letter-spacing: 0.02em; color: #cdddff; }
+.cabecalho h1 { margin: 2px 0 2px; font-size: clamp(24px, 1.6vw + 16px, 40px); line-height: 1.15; font-weight: 750; }
+.cabecalho .sub { margin: 0; color: #dfe8ff; font-size: clamp(14px, 0.3vw + 13px, 17px); }
+.cabecalho .acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.cabecalho .atualizado { font-size: 13px; color: #cdddff; }
+.btn { border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); color: #fff; border-radius: 10px;
+  padding: 7px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+main { padding: clamp(14px, 2vw, 26px) 0 36px; }
+h2 { font-size: clamp(18px, 0.6vw + 15px, 23px); margin: clamp(22px, 3vw, 36px) 0 12px; }
+.aviso-dados { background: #fef9c3; color: #713f12; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
+.cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-cartao); padding: clamp(14px, 1.6vw, 22px); min-width: 0; }
+
+/* hoje: alerta + sensação + tempo, de 1 a 3 colunas */
+.hoje { display: grid; gap: clamp(10px, 1.2vw, 16px); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .hoje { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hoje .alerta { grid-column: 1 / -1; } }
+@media (min-width: 1200px) { .hoje { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.85fr); } .hoje .alerta { grid-column: auto; } }
+.alerta { border-radius: var(--raio-cartao); padding: clamp(16px, 1.8vw, 26px); border: 1px solid rgba(0, 0, 0, 0.06); display: flex; flex-direction: column; gap: 8px; }
+.alerta .quando { font-size: 14px; font-weight: 650; opacity: 0.9; }
+.alerta .nivel { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.alerta .nivel .num { font-size: 15px; font-weight: 750; padding: 3px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.65); }
+.alerta .nivel .nome { font-size: clamp(32px, 2.6vw + 18px, 52px); font-weight: 800; line-height: 1.05; }
+.alerta .motivo { font-size: clamp(15px, 0.3vw + 14px, 18px); margin: 0; }
+.alerta .janela { align-self: flex-start; font-weight: 750; font-size: 15px; background: rgba(255, 255, 255, 0.65); border-radius: 10px; padding: 5px 11px; }
+.alerta h3 { font-size: 15px; margin: 4px 0 0; }
 .alerta ul { margin: 0; padding-left: 20px; }
 .alerta li { margin: 2px 0; }
-.tempo-hoje { display: flex; flex-direction: column; gap: 10px; }
-.tempo-hoje .linha1 { display: flex; align-items: center; gap: 14px; }
-.tempo-hoje .linha1 .cond { font-size: 18px; font-weight: 600; }
-.tempo-hoje .linha1 .estab { font-size: 13px; color: var(--tinta2); }
-.numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
-.numeros div span { display: block; font-size: 13px; color: var(--tinta2); }
-.numeros div strong { font-size: 24px; font-weight: 650; }
-.numeros div small { font-size: 13px; color: var(--tinta2); }
-/* dias */
-.dias { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 980px) { .dias { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); } }
-.dia { text-align: left; font: inherit; color: inherit; background: var(--superficie); border: 1px solid var(--borda); border-radius: 14px;
-  padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+.alerta .compartilhar { align-self: flex-start; margin-top: 4px; border: 1px solid currentColor; background: rgba(255, 255, 255, 0.5); color: inherit;
+  border-radius: 10px; padding: 6px 12px; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+.alerta .compartilhar:hover { background: rgba(255, 255, 255, 0.8); }
+
+.sensacao .rotulo { font-size: 14px; font-weight: 650; color: var(--tinta2); }
+.sensacao .rotulo small { display: block; font-weight: 400; font-size: 13px; }
+.sensacao .valor { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 2px; }
+.sensacao .valor strong { font-size: clamp(56px, 4vw + 30px, 84px); font-weight: 750; line-height: 1; }
+.pilula-faixa { display: inline-block; font-size: 15px; font-weight: 750; border-radius: 999px; padding: 4px 12px; }
+.sensacao .hora { font-size: 14px; color: var(--tinta2); }
+.regua { margin: 16px 0 6px; }
+.regua .barra { position: relative; display: flex; gap: 2px; height: 14px; }
+.regua .barra span { height: 100%; }
+.regua .barra span:first-child { border-radius: 7px 0 0 7px; }
+.regua .barra span:last-child { border-radius: 0 7px 7px 0; }
+.regua .marcador { position: absolute; top: -9px; width: 0; height: 0; transform: translateX(-7px);
+  border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid var(--tinta); }
+.regua .marcador::after { content: ""; position: absolute; left: -1px; top: -9px; width: 2px; height: 32px; background: var(--tinta); }
+.regua .ticks { position: relative; height: 18px; font-size: 12px; color: var(--muda); font-variant-numeric: tabular-nums; }
+.regua .ticks span { position: absolute; transform: translateX(-50%); top: 4px; }
+.horas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.horas div { border-left: 4px solid; border-radius: 4px; padding: 4px 8px; background: var(--lavagem); min-width: 0; }
+.horas b { display: block; font-size: 20px; }
+.horas span { font-size: 12.5px; color: var(--tinta2); line-height: 1.3; display: block; }
+.sensacao .explica { font-size: 13px; color: var(--tinta2); margin: 10px 0 0; }
+
+.tempo-dia .linha1 { display: flex; align-items: center; gap: 12px; }
+.tempo-dia .cond { font-size: 18px; font-weight: 650; }
+.tempo-dia .estab { font-size: 13px; color: var(--tinta2); }
+.numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-top: 10px; }
+.numeros span { display: block; font-size: 13px; color: var(--tinta2); }
+.numeros strong { font-size: 22px; font-weight: 650; }
+.numeros small { font-size: 13px; color: var(--tinta2); }
+
+/* próximos dias */
+.dias { display: grid; gap: clamp(8px, 1vw, 12px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dias .dia:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@media (min-width: 760px) { .dias { grid-template-columns: repeat(5, minmax(0, 1fr)); } .dias .dia:last-child:nth-child(odd) { grid-column: auto; } }
+.dia { text-align: left; font: inherit; color: inherit; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-cartao);
+  padding: 12px clamp(10px, 1vw, 14px); cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .dia:hover { background: var(--lavagem); }
 .dia[aria-pressed="true"] { outline: 2px solid var(--tinta); outline-offset: -2px; }
-.dia .cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; width: 100%; }
+.dia .cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 8px; width: 100%; }
 .dia .cab b { font-size: 16px; }
 .dia .cab span { font-size: 13px; color: var(--tinta2); }
-.chip { justify-self: start; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px 3px 4px; font-size: 13.5px; font-weight: 700; align-self: flex-start; }
+.chip { justify-self: start; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px 3px 4px; font-size: 13.5px; font-weight: 750; }
 .chip i { font-style: normal; width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; background: rgba(255, 255, 255, 0.7); }
+.dia .chip { font-size: 12.5px; padding: 2px 9px 2px 3px; gap: 4px; max-width: 100%; }
+.dia .chip i { width: 18px; height: 18px; font-size: 11px; }
+.dia .sens span { display: block; font-size: 12.5px; color: var(--tinta2); line-height: 1.2; }
+.dia .sens div { display: flex; align-items: center; gap: 8px; }
+.dia .sens strong { font-size: clamp(26px, 1.2vw + 18px, 34px); font-weight: 750; line-height: 1.1; }
+.dia .sens .pt { width: 12px; height: 12px; border-radius: 3px; flex: none; }
 .dia .cond { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.dia .temps { font-size: 15px; }
-.dia .temps b { font-size: 20px; }
 .dia .info { font-size: 13px; color: var(--tinta2); line-height: 1.4; }
-.marca { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 1px 7px; background: var(--lavagem); color: var(--tinta2); }
+.marca-noite { align-self: flex-start; font-size: 12px; font-weight: 650; border-radius: 6px; padding: 1px 7px; background: var(--lavagem); color: var(--tinta2); }
+
 /* gráficos */
+.graficos { display: grid; gap: 12px; }
 .cartao-topo { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
-.cartao h3 { margin: 0; font-size: 16px; }
-.cartao .nota { margin: 2px 0 0; font-size: 13px; color: var(--tinta2); }
-.btn-tabela { flex: none; border: 1px solid var(--borda); background: none; color: var(--tinta2); border-radius: 6px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+.cartao h3 { margin: 0; font-size: clamp(15px, 0.3vw + 14px, 18px); }
+.cartao .nota { margin: 2px 0 0; font-size: 13.5px; color: var(--tinta2); }
+.btn-tabela { flex: none; border: 1px solid var(--borda); background: none; color: var(--tinta2); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
 .btn-tabela[aria-pressed="true"] { background: var(--lavagem); color: var(--tinta); }
 .legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--tinta2); margin: 0 0 6px; }
 .legenda span { display: inline-flex; align-items: center; gap: 6px; }
-.k-linha { width: 16px; height: 2px; display: inline-block; border-radius: 1px; }
+.k-linha { width: 18px; height: 2px; display: inline-block; border-radius: 1px; }
 .k-caixa { width: 12px; height: 12px; display: inline-block; border-radius: 3px; }
 .grafico svg { display: block; overflow: visible; }
 .eixo text { fill: var(--muda); font-size: 11.5px; font-variant-numeric: tabular-nums; }
-.vista-tabela { max-height: 380px; overflow: auto; border: 1px solid var(--borda); border-radius: 8px; }
+.vista-tabela { max-height: 400px; overflow: auto; border: 1px solid var(--borda); border-radius: 10px; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
 th, td { padding: 6px 9px; text-align: right; border-bottom: 1px solid var(--grade); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
-thead th { position: sticky; top: 0; background: var(--superficie); color: var(--tinta2); font-weight: 600; }
-.pilula { display: inline-block; border-radius: 6px; padding: 1px 6px; font-weight: 600; }
-/* níveis */
-.niveis { display: grid; gap: 8px; }
-.nivel-linha { display: grid; grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; align-items: start; background: var(--superficie);
-  border: 1px solid var(--borda); border-radius: 12px; padding: 12px 14px; }
-@media (max-width: 760px) { .nivel-linha { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
+thead th { position: sticky; top: 0; background: var(--superficie); color: var(--tinta2); font-weight: 650; z-index: 1; }
+.pilula { display: inline-block; border-radius: 6px; padding: 1px 6px; font-weight: 650; }
+
+/* níveis e cuidados */
+.niveis { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.nivel-linha { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 6px 14px; align-items: start; align-content: start; background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: 14px; padding: 12px 14px; }
+.nivel-linha .chip { grid-row: span 2; }
+@media (max-width: 520px) { .nivel-linha { grid-template-columns: minmax(0, 1fr); } .nivel-linha .chip { grid-row: auto; } }
 .nivel-linha p, .nivel-linha ul { margin: 0; font-size: 14px; }
 .nivel-linha ul { padding-left: 18px; }
-.cuidados { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.nota-dias { font-size: 14px; color: var(--tinta2); max-width: 980px; }
+.cuidados { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
 .cuidados h3 { margin: 0 0 6px; font-size: 15px; }
 .cuidados ul { margin: 0; padding-left: 18px; font-size: 14px; }
-details.tecnico { background: var(--superficie); border: 1px solid var(--borda); border-radius: 14px; padding: 12px 18px; margin-top: 28px; }
-details.tecnico summary { cursor: pointer; font-weight: 650; font-size: 16px; }
-details.tecnico p, details.tecnico li { font-size: 14px; max-width: 900px; }
+
+details.tecnico { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-cartao); padding: 12px 18px; margin-top: clamp(22px, 3vw, 36px); }
+details.tecnico summary { cursor: pointer; font-weight: 700; font-size: 16px; }
+details.tecnico p, details.tecnico li { font-size: 14px; max-width: 980px; }
+details.tecnico .vista-tabela td:first-child, details.tecnico .vista-tabela th:first-child { position: sticky; left: 0; background: var(--superficie); z-index: 1; }
 .segmentado { display: inline-flex; border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; margin: 10px 0; }
 .segmentado button { border: 0; background: none; color: var(--tinta2); font: inherit; font-size: 13.5px; padding: 5px 12px; cursor: pointer; }
 .segmentado button + button { border-left: 1px solid var(--borda); }
-.segmentado button[aria-pressed="true"] { background: var(--lavagem); color: var(--tinta); font-weight: 600; }
+.segmentado button[aria-pressed="true"] { background: var(--lavagem); color: var(--tinta); font-weight: 650; }
+
 #tooltip { position: fixed; z-index: 10; pointer-events: none; background: var(--superficie); color: var(--tinta); border: 1px solid var(--borda);
-  border-radius: 8px; box-shadow: var(--sombra); padding: 8px 10px; font-size: 13px; max-width: 280px; }
+  border-radius: 10px; box-shadow: var(--sombra); padding: 8px 10px; font-size: 13px; max-width: 290px; }
 #tooltip .t { color: var(--tinta2); margin-bottom: 3px; }
 #tooltip .l { display: flex; gap: 8px; align-items: center; }
 #tooltip .l strong { font-variant-numeric: tabular-nums; }
 #tooltip .l span { color: var(--tinta2); }
-footer { border-top: 1px solid var(--borda); padding: 16px 0 28px; font-size: 13px; color: var(--tinta2); }
-:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
-@media (max-width: 520px) { h1 { font-size: 22px; } .alerta .nivel .nome { font-size: 32px; } .cartao { padding: 14px; } }
+
+footer { background: var(--marca-escura); color: #dfe8ff; margin-top: 8px; }
+footer .largura { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; padding-block: 24px 30px; }
+footer img { width: clamp(110px, 10vw, 150px); height: auto; flex: none; }
+footer .creditos { flex: 1 1 340px; font-size: 13.5px; line-height: 1.55; }
+footer .creditos p { margin: 0 0 8px; }
+footer a { color: #9cc8ff; }
+:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+@media print { .faixa-inst, .cabecalho .acoes, .btn-tabela, .compartilhar, details.tecnico { display: none !important; } .cabecalho { background: #fff; color: #000; } }
 </style>
 </head>
 <body>
-<header>
-  <div class="largura topo">
-    <div>
+<div class="faixa-inst">
+  <div class="largura"><img src="img/instituicoes.jpg" width="1413" height="234"
+    alt="Diretoria de Vigilância em Saúde (SMS/PMPA), Sistema Único de Saúde e Prefeitura de Porto Alegre – Secretaria de Saúde"></div>
+</div>
+<header class="cabecalho">
+  <div class="largura">
+    <img class="marca" src="img/cisc-marca.png" width="285" height="289" alt="CISC">
+    <div class="titulos">
+      <p class="sobre">CISC · Centro de Informação em Saúde e Clima</p>
       <h1>Calor em Porto Alegre</h1>
       <p class="sub">Previsão do tempo e alertas do Protocolo de Calor para os próximos 5 dias</p>
-      <p class="atualizado" id="atualizado"></p>
     </div>
-    <button id="tema" type="button">Tema</button>
+    <div class="acoes">
+      <span class="atualizado" id="atualizado"></span>
+      <button class="btn" id="tema" type="button">Tema</button>
+    </div>
   </div>
 </header>
 
 <main class="largura">
   <div id="aviso-dados" class="aviso-dados" hidden></div>
 
-  <section class="destaque" aria-live="polite">
-    <div class="alerta" id="alerta"></div>
-    <div class="cartao tempo-hoje" id="tempo-dia"></div>
+  <section class="hoje" aria-live="polite" aria-label="Alerta e sensação térmica do dia escolhido">
+    <article class="alerta" id="alerta"></article>
+    <article class="cartao sensacao" id="sensacao"></article>
+    <article class="cartao tempo-dia" id="tempo-dia"></article>
   </section>
 
   <h2>Próximos dias</h2>
   <div class="dias" id="dias" role="group" aria-label="Escolha o dia"></div>
 
   <h2>Sensação térmica hora a hora</h2>
-  <figure class="cartao" style="margin:0">
-    <div class="cartao-topo">
-      <div>
-        <h3>Sensação térmica e temperatura do ar</h3>
-        <p class="nota">A sensação térmica (índice UTCI) junta temperatura, umidade, vento e sol: é o calor que o corpo sente ao ar livre. As faixas coloridas mostram os limites do protocolo.</p>
+  <div class="graficos">
+    <figure class="cartao" style="margin:0">
+      <div class="cartao-topo">
+        <div>
+          <h3>A sensação térmica (linha preta) é o que aciona os alertas</h3>
+          <p class="nota">A sensação térmica (índice UTCI) junta temperatura, umidade, vento e sol: é o calor que o corpo sente ao ar livre. As faixas coloridas são os limites do protocolo; o número em cada dia é o pico da sensação.</p>
+        </div>
+        <button class="btn-tabela" type="button" data-tabela="graf-calor" aria-pressed="false">Tabela</button>
       </div>
-      <button class="btn-tabela" type="button" data-tabela="graf-calor" aria-pressed="false">Tabela</button>
-    </div>
-    <div class="legenda" id="legenda-calor"></div>
-    <div class="grafico" id="graf-calor"></div>
-  </figure>
-
-  <figure class="cartao" style="margin:12px 0 0">
-    <div class="cartao-topo">
-      <div>
-        <h3>Chuva prevista (mm por hora)</h3>
-        <p class="nota">Média dos dois modelos no centro de Porto Alegre.</p>
+      <div class="legenda" id="legenda-calor"></div>
+      <div class="grafico" id="graf-calor"></div>
+    </figure>
+    <figure class="cartao" style="margin:0">
+      <div class="cartao-topo">
+        <div>
+          <h3>Chuva prevista (mm por hora)</h3>
+          <p class="nota">Média dos dois modelos no centro de Porto Alegre.</p>
+        </div>
+        <button class="btn-tabela" type="button" data-tabela="graf-chuva" aria-pressed="false">Tabela</button>
       </div>
-      <button class="btn-tabela" type="button" data-tabela="graf-chuva" aria-pressed="false">Tabela</button>
-    </div>
-    <div class="grafico" id="graf-chuva"></div>
-  </figure>
+      <div class="grafico" id="graf-chuva"></div>
+    </figure>
+  </div>
 
   <h2>O que significa cada nível</h2>
   <div class="niveis" id="niveis"></div>
-  <p class="nota" style="font-size:14px;color:var(--tinta2);max-width:900px">O alerta também considera vários dias: com madrugadas amenas, a Atenção só começa no segundo dia de calor; o nível sobe quando o calor se repete por dias seguidos, começa um dia antes quando um dia de calor forte está chegando e só baixa aos poucos depois de um dia de alerta, porque o corpo leva tempo para se recuperar.</p>
+  <p class="nota-dias">O alerta também considera vários dias: com madrugadas amenas, a Atenção só começa no segundo dia de calor; o nível sobe quando o calor se repete por dias seguidos, começa um dia antes quando um dia de calor forte está chegando e só baixa aos poucos depois de um dia de alerta, porque o corpo leva tempo para se recuperar.</p>
 
   <h2>Cuidados no calor</h2>
   <div class="cuidados">
@@ -195,7 +278,7 @@ footer { border-top: 1px solid var(--borda); padding: 16px 0 28px; font-size: 13
 
   <details class="tecnico" id="tecnico">
     <summary>Detalhes técnicos (para profissionais)</summary>
-    <p>Valores mínimos e máximos de cada dia, por modelo, com o horário entre parênteses. Cores das faixas: as mesmas do protocolo (IBUTG em escala ocupacional, ISO 7243 e NR-15).</p>
+    <p>Valores mínimos e máximos de cada dia, por modelo, com o horário entre parênteses. Cores das faixas: as do protocolo (IBUTG em escala ocupacional, ISO 7243 e NR-15).</p>
     <div class="segmentado" id="modelo-tec" role="group" aria-label="Modelo"></div>
     <div class="vista-tabela" id="tabela-tec" style="max-height:none"></div>
     <h3 style="font-size:15px;margin:18px 0 6px">Como o nível é calculado</h3>
@@ -209,14 +292,18 @@ footer { border-top: 1px solid var(--borda); padding: 16px 0 28px; font-size: 13
       <li>As regras entre dias consideram também os 3 dias anteriores. O horário crítico é o do nível final do dia.</li>
       <li>Chuva: estabilidade pela chuva no centro e na vizinhança de 55 km e pela probabilidade de chuva diária ≥ 10, 25 e 50 mm em algum ponto da vizinhança (NMEP), com os ensembles GFS (31 membros) e ECMWF (51 membros).</li>
     </ul>
-    <p>Métodos: UTCI (Fiala et al., 2012; Bröde et al., 2012), temperatura radiante média no esquema ERA5-HEAT (Di Napoli et al., 2020), com radiação direta normal ao sol, PET (pythermalcomfort), IBUTG (ISO 7243:2017) e taxa metabólica admissível (NR-15, Anexo 3), índice de calor (NOAA) e orientações da OMM (WMO-No. 1142).</p>
+    <p>Métodos: UTCI (Fiala et al., 2012; Bröde et al., 2012), temperatura radiante média no esquema ERA5-HEAT (Di Napoli et al., 2020), com radiação direta normal ao sol, IBUTG (ISO 7243:2017) e taxa metabólica admissível (NR-15, Anexo 3), e orientações da OMM (WMO-No. 1142).</p>
   </details>
 </main>
 
 <footer>
   <div class="largura">
-    Dados de previsão: ECMWF IFS e NOAA GFS, via <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0). Atualização automática a cada 3 horas.
-    Este painel é informativo e não substitui os avisos oficiais: siga as orientações da Defesa Civil (199) e da Saúde. Emergência: SAMU 192.
+    <img src="img/cisc-logo.png" width="350" height="420" alt="CISC – Centro de Informação em Saúde e Clima">
+    <div class="creditos">
+      <p><strong>Painel do Protocolo de Calor de Porto Alegre</strong>, desenvolvido pelo CISC – Centro de Informação em Saúde e Clima.</p>
+      <p>Previsão: modelos ECMWF IFS e NOAA GFS, via <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0), atualizada automaticamente a cada 3 horas. Previsões têm incerteza, que aumenta nos dias mais distantes.</p>
+      <p>Emergência: <strong>SAMU 192</strong> · Defesa Civil <strong>199</strong> · Bombeiros <strong>193</strong></p>
+    </div>
   </div>
 </footer>
 <div id="tooltip" hidden></div>

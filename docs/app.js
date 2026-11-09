@@ -11,7 +11,6 @@
   const f0 = LOC.format(".0f"), f1 = LOC.format(".1f");
   const grau = (v) => (v == null ? "—" : `${f0(v)}°`);
   const grauC = (v) => (v == null ? "—" : `${f1(v)} °C`);
-  const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   const SEM = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
   // Horários são "hora de Porto Alegre" e ficam como UTC no navegador, para não depender do fuso de quem vê.
   const dataDe = (s) => new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10), +(s.slice(11, 13) || 0), +(s.slice(14, 16) || 0)));
@@ -27,6 +26,16 @@
     return d.data === AGORA.data ? "Hoje" : d.data === amanha ? "Amanhã" : d.dia_semana;
   };
 
+  // Faixas da sensação térmica (UTCI) do protocolo
+  const FAIXAS = [
+    { de: -99, ate: 28, cor: "#74c476", texto: "#111", nome: "Normal" },
+    { de: 28, ate: 34, cor: "#facc15", texto: "#111", nome: "Atenção" },
+    { de: 34, ate: 38, cor: "#ea580c", texto: "#fff", nome: "Alerta" },
+    { de: 38, ate: 48, cor: "#dc2626", texto: "#fff", nome: "Perigo" },
+    { de: 48, ate: 99, cor: "#6b21a8", texto: "#fff", nome: "Emergência" },
+  ];
+  const faixa = (u) => FAIXAS.find((f) => u >= f.de && u < f.ate) || FAIXAS[0];
+
   // ------------------------------------------------------------------ DOM
   function el(tag, attrs = {}, ...filhos) {
     const e = document.createElement(tag);
@@ -37,9 +46,11 @@
       else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
       else e.setAttribute(k, v === true ? "" : v);
     }
-    for (const f of filhos) if (f != null) e.append(f);
+    for (const f of filhos) if (f != null && f !== false) e.append(f);
     return e;
   }
+  // replaceChildren escreveria "null" para um filho vazio; por isso o filtro
+  const trocar = (alvo, ...filhos) => alvo.replaceChildren(...filhos.filter((f) => f != null && f !== false));
   const svgEl = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
 
   // Ícones do tempo (códigos representativos do protocolo: 0, 2, 3, 51, 63, 95)
@@ -50,13 +61,10 @@
       return `<line x1="${cx + r1 * Math.cos(a)}" y1="${cy + r1 * Math.sin(a)}" x2="${cx + r2 * Math.cos(a)}" y2="${cy + r2 * Math.sin(a)}" stroke="var(--sol)" stroke-width="2" stroke-linecap="round"/>`;
     }).join("");
     const gotas = (n) => [12, 19, 26].slice(0, n).map((x) => `<line x1="${x}" y1="33" x2="${x - 2}" y2="38" stroke="var(--gota)" stroke-width="2" stroke-linecap="round"/>`).join("");
+    const escura = nuvem.replace("var(--nuvem2)", "var(--nuvem)");
     const corpo = {
-      0: sol(20, 20, 8),
-      2: sol(26, 14, 6) + nuvem,
-      3: nuvem.replace("var(--nuvem2)", "var(--nuvem)"),
-      51: nuvem + gotas(2),
-      63: nuvem.replace("var(--nuvem2)", "var(--nuvem)") + gotas(3),
-      95: nuvem.replace("var(--nuvem2)", "var(--nuvem)") + `<path d="M21 29l-5 7h4l-2 6 7-9h-4l2-4z" fill="var(--raio)"/>`,
+      0: sol(20, 20, 8), 2: sol(26, 14, 6) + nuvem, 3: escura, 51: nuvem + gotas(2), 63: escura + gotas(3),
+      95: escura + `<path d="M21 29l-5 7h4l-2 6 7-9h-4l2-4z" fill="var(--raio)"/>`,
     }[codigo] || sol(20, 20, 8);
     return svgEl(`<svg width="${tam}" height="${tam}" viewBox="0 0 40 42" aria-hidden="true">${corpo}</svg>`);
   }
@@ -64,10 +72,8 @@
   // ------------------------------------------------------------------ tooltip e tabelas
   const tip = $("tooltip");
   function mostrarTip(x, y, titulo, linhas) {
-    tip.replaceChildren(el("div", { class: "t" }, titulo), ...linhas.map((l) => {
-      const k = l.cor ? el("i", { class: "k-linha", style: `background:${l.cor}` }) : null;
-      return el("div", { class: "l" }, k, el("strong", {}, l.valor), el("span", {}, l.rotulo || ""));
-    }));
+    trocar(tip, el("div", { class: "t" }, titulo), ...linhas.map((l) => el("div", { class: "l" },
+      l.cor ? el("i", { class: "k-linha", style: `background:${l.cor}` }) : null, el("strong", {}, l.valor), el("span", {}, l.rotulo || ""))));
     tip.hidden = false;
     const r = tip.getBoundingClientRect();
     let left = x + 14, top = y + 14;
@@ -76,17 +82,15 @@
     tip.style.left = `${Math.max(8, left)}px`; tip.style.top = `${Math.max(8, top)}px`;
   }
   const esconderTip = () => { tip.hidden = true; };
-  function tabela(colunas, linhas) {
-    return el("table", {}, el("thead", {}, el("tr", {}, ...colunas.map((c) => el("th", { scope: "col" }, c)))),
-      el("tbody", {}, ...linhas.map((l) => el("tr", {}, ...l.map((v) => el("td", {}, v))))));
-  }
+  const tabela = (colunas, linhas) => el("table", {}, el("thead", {}, el("tr", {}, ...colunas.map((c) => el("th", { scope: "col" }, c)))),
+    el("tbody", {}, ...linhas.map((l) => el("tr", {}, ...l.map((v) => el("td", {}, v))))));
   const TABELAS = {};
   function vistaTabela(id) {
     const btn = document.querySelector(`[data-tabela="${id}"]`), graf = $(id);
     let vt = $(`${id}-tabela`);
     if (btn.getAttribute("aria-pressed") !== "true") { if (vt) vt.hidden = true; graf.hidden = false; return; }
     if (!vt) { vt = el("div", { id: `${id}-tabela`, class: "vista-tabela" }); graf.after(vt); }
-    vt.replaceChildren(tabela(TABELAS[id].colunas, TABELAS[id].linhas));
+    trocar(vt, tabela(TABELAS[id].colunas, TABELAS[id].linhas));
     vt.hidden = false; graf.hidden = true;
   }
   document.querySelectorAll(".btn-tabela").forEach((b) => b.addEventListener("click", () => {
@@ -100,68 +104,104 @@
   let selecionado = Math.max(0, DIAS.findIndex((d) => d.data === AGORA.data));
   const H = P.horario;
   const T = H.tempo.map(dataDe);
-  const FAIXAS = [
-    { de: 28, ate: 34, cor: "#facc15", nome: "Atenção" }, { de: 34, ate: 38, cor: "#ea580c", nome: "Alerta" },
-    { de: 38, ate: 48, cor: "#dc2626", nome: "Perigo" }, { de: 48, ate: 70, cor: "#6b21a8", nome: "Emergência" },
-  ];
-  const faixaDe = (u) => (u >= 48 ? "Emergência" : u >= 38 ? "Perigo" : u >= 34 ? "Alerta" : u >= 28 ? "Atenção" : "Sem calor relevante");
+  const UMA_HORA = 3600000;
 
   // ------------------------------------------------------------------ cabeçalho e aviso
   const gerado = P.gerado_em;
-  $("atualizado").textContent = `Atualizado em ${ddmm(gerado)}/${gerado.slice(0, 4)} às ${gerado.slice(11, 16)} · consenso dos modelos ECMWF e GFS`;
-  const horasDesde = (AGORA.quando - dataDe(gerado)) / 3600000;
+  $("atualizado").textContent = `Atualizado às ${gerado.slice(11, 16)} de ${ddmm(gerado)}`;
+  const horasDesde = (AGORA.quando - dataDe(gerado)) / UMA_HORA;
   if (horasDesde > 12) {
     const aviso = $("aviso-dados");
     aviso.hidden = false;
-    aviso.textContent = `Atenção: esta previsão foi gerada há ${Math.round(horasDesde)} horas. A atualização automática pode ter falhado; confira os avisos oficiais.`;
+    aviso.textContent = `Atenção: esta previsão foi gerada há ${Math.round(horasDesde)} horas. A atualização automática pode ter falhado; confira também os avisos da Defesa Civil.`;
   }
 
-  // ------------------------------------------------------------------ destaque do dia escolhido
-  function renderDestaque() {
-    const d = DIAS[selecionado];
-    const a = $("alerta");
+  // ------------------------------------------------------------------ compartilhar
+  function compartilhar(d) {
+    const url = location.href.split("#")[0];
+    const quando = rotuloDia(d) === "Hoje" ? "Hoje" : `${rotuloDia(d)} (${ddmm(d.data)})`;
+    const texto = `Calor em Porto Alegre — ${quando}: Nível ${d.nivel}, ${d.nome}. Sensação térmica de até ${f0(d.sensacao.max)} °C.`
+      + (d.janela_ini != null ? ` Horário mais crítico: ${d.janela_ini}h às ${d.janela_fim}h.` : "") + ` ${d.publico[0]}`;
+    if (navigator.share) navigator.share({ title: "Calor em Porto Alegre", text: texto, url }).catch(() => {});
+    else window.open(`https://wa.me/?text=${encodeURIComponent(`${texto} ${url}`)}`, "_blank", "noopener");
+  }
+
+  // ------------------------------------------------------------------ dia escolhido: alerta, sensação e tempo
+  function renderAlerta() {
+    const d = DIAS[selecionado], a = $("alerta");
     a.style.background = d.cor_bg; a.style.color = d.cor_fg;
-    const quando = rotuloDia(d) === "Hoje" ? `Hoje, ${ddmm(d.data)}` : `${rotuloDia(d)}, ${ddmm(d.data)}`;
-    // replaceChildren escreveria "null" para um filho vazio; por isso o filtro
-    a.replaceChildren(...[
-      el("div", { class: "quando" }, `${quando} · Protocolo de Calor`),
+    trocar(a,
+      el("div", { class: "quando" }, `${rotuloDia(d) === "Hoje" ? "Hoje" : rotuloDia(d)}, ${ddmm(d.data)} · Protocolo de Calor`),
       el("div", { class: "nivel" }, el("span", { class: "num" }, `Nível ${d.nivel}`), el("span", { class: "nome" }, d.nome)),
       el("p", { class: "motivo" }, d.motivo),
       d.janela_ini != null ? el("div", { class: "janela" }, `Horário mais crítico: ${d.janela_ini}h às ${d.janela_fim}h`) : null,
       el("h3", {}, d.nivel > 1 ? "O que fazer" : "Recomendações"),
       el("ul", {}, ...d.publico.map((t) => el("li", {}, t))),
-    ].filter(Boolean));
-    const t = $("tempo-dia");
-    t.replaceChildren(
+      el("button", { class: "compartilhar", type: "button", onclick: () => compartilhar(d) }, "Compartilhar este alerta"),
+    );
+  }
+
+  function regua(valor) {
+    const MIN = 10, MAX = 50, pos = (v) => ((Math.max(MIN, Math.min(MAX, v)) - MIN) / (MAX - MIN)) * 100;
+    const segs = FAIXAS.map((f) => ({ ...f, a: Math.max(f.de, MIN), b: Math.min(f.ate, MAX) }));
+    const barra = el("div", { class: "barra" }, ...segs.map((s) => el("span", { title: `${s.nome}: ${s.a === MIN ? "abaixo de" : `${s.a}° a`} ${s.b === MAX ? "mais" : `${s.b}°`}`,
+      style: `flex:${s.b - s.a};background:${s.cor}` })), el("i", { class: "marcador", style: `left:${pos(valor)}%` }));
+    const ticks = el("div", { class: "ticks" }, ...[28, 34, 38, 48].map((t) => el("span", { style: `left:${pos(t)}%` }, `${t}°`)));
+    return el("div", { class: "regua", role: "img", "aria-label": `Sensação térmica máxima de ${f0(valor)} graus, faixa ${faixa(valor).nome}` }, barra, ticks);
+  }
+
+  function renderSensacao() {
+    const d = DIAS[selecionado], fx = faixa(d.sensacao.max);
+    const horas = [[28, "#facc15", "Atenção", d.horas_utci_28], [34, "#ea580c", "Alerta", d.horas_utci_34], [38, "#dc2626", "Perigo", d.horas_utci_38]];
+    if (d.horas_utci_48 > 0) horas.push([48, "#6b21a8", "Emergência", d.horas_utci_48]);
+    trocar($("sensacao"),
+      el("div", { class: "rotulo" }, "Sensação térmica máxima", el("small", {}, "é ela que aciona os alertas do protocolo")),
+      el("div", { class: "valor" }, el("strong", {}, grau(d.sensacao.max)),
+        el("span", { class: "pilula-faixa", style: `background:${fx.cor};color:${fx.texto}` }, fx.nome),
+        el("span", { class: "hora" }, `às ${d.sensacao.h_max}`)),
+      regua(d.sensacao.max),
+      el("div", { class: "horas", "aria-label": "Horas do dia em cada faixa de sensação térmica" }, ...horas.map(([lim, cor, nome, h]) =>
+        el("div", { style: `border-left-color:${cor}`, title: `${h} horas com sensação térmica de ${lim} °C ou mais` },
+          el("b", {}, `${h} h`), el("span", {}, `≥ ${lim}° · ${nome}`)))),
+      el("p", { class: "explica" }, `A sensação térmica soma ao calor do ar (máxima de ${grau(d.temp.max)}) o efeito do sol, da umidade e do vento.`),
+    );
+  }
+
+  function renderTempo() {
+    const d = DIAS[selecionado];
+    trocar($("tempo-dia"),
       el("div", { class: "linha1" }, icone(d.codigo, 56), el("div", {}, el("div", { class: "cond" }, d.condicao), el("div", { class: "estab" }, d.tempo))),
       el("div", { class: "numeros" },
-        el("div", {}, el("span", {}, "Máxima"), el("strong", {}, grau(d.temp.max)), el("small", {}, ` às ${d.temp.h_max}`)),
-        el("div", {}, el("span", {}, "Mínima"), el("strong", {}, grau(d.temp.min)), el("small", {}, ` às ${d.temp.h_min}`)),
-        el("div", {}, el("span", {}, "Sensação térmica máxima"), el("strong", {}, grau(d.sensacao.max)), el("small", {}, ` às ${d.sensacao.h_max}`)),
-        el("div", {}, el("span", {}, "Madrugada"), el("strong", {}, grau(d.tmin_noite)),
-          el("small", {}, d.noite_quente ? " quente" : d.noite_fresca ? " fresca" : "")),
-        el("div", {}, el("span", {}, "Chuva"), el("strong", {}, `${f1(d.chuva_mm)} mm`),
-          el("small", {}, d.chance_chuva_10mm != null ? ` · ${f0(d.chance_chuva_10mm)}% de chance de 10 mm ou mais` : "")),
-        el("div", {}, el("span", {}, "Vento"), el("strong", {}, `${f0(d.vento_max)} km/h`), el("small", {}, ` ${d.vento_dir} · rajadas de ${f0(d.rajada_max)}`)),
+        el("div", {}, el("span", {}, "Temperatura máxima"), el("strong", {}, grau(d.temp.max)), el("small", {}, ` às ${d.temp.h_max}`)),
+        el("div", {}, el("span", {}, "Temperatura mínima"), el("strong", {}, grau(d.temp.min)), el("small", {}, ` às ${d.temp.h_min}`)),
+        el("div", {}, el("span", {}, "Madrugada (0h–6h)"), el("strong", {}, grau(d.tmin_noite)), el("small", {}, d.noite_quente ? " quente" : d.noite_fresca ? " fresca" : " amena")),
+        el("div", {}, el("span", {}, "Chuva no dia"), el("strong", {}, `${f1(d.chuva_mm)} mm`)),
+        el("div", {}, el("span", {}, "Chance de chuva forte (≥10 mm)"), el("strong", {}, d.chance_chuva_10mm != null ? `${f0(d.chance_chuva_10mm)}%` : "—")),
+        el("div", {}, el("span", {}, `Vento máximo (${d.vento_dir})`), el("strong", {}, `${f0(d.vento_max)} km/h`)),
+        el("div", {}, el("span", {}, "Rajadas"), el("strong", {}, `${f0(d.rajada_max)} km/h`)),
       ),
     );
   }
 
   // ------------------------------------------------------------------ cartões dos dias
   function renderDias() {
-    $("dias").replaceChildren(...DIAS.map((d, i) => el("button", {
-      class: "dia", type: "button", "aria-pressed": String(i === selecionado),
-      "aria-label": `${rotuloDia(d)} ${ddmm(d.data)}: nível ${d.nivel}, ${d.nome}`,
-      onclick: () => { selecionado = i; renderTudo(); },
-    },
-      el("div", { class: "cab" }, el("b", {}, rotuloDia(d)), el("span", {}, ddmm(d.data))),
-      el("span", { class: "chip", style: `background:${d.cor_bg};color:${d.cor_fg}` }, el("i", {}, String(d.nivel)), d.nome),
-      el("div", { class: "cond" }, icone(d.codigo, 30), d.condicao),
-      el("div", { class: "temps" }, el("b", {}, grau(d.temp.max)), ` / ${grau(d.temp.min)}`),
-      el("div", { class: "info" }, `Sensação até ${grau(d.sensacao.max)}`, el("br"),
-        `Chuva ${f1(d.chuva_mm)} mm${d.chance_chuva_10mm != null ? ` · ${f0(d.chance_chuva_10mm)}% ≥10 mm` : ""}`),
-      d.noite_quente ? el("span", { class: "marca" }, "Madrugada quente") : null,
-    )));
+    trocar($("dias"), ...DIAS.map((d, i) => {
+      const fx = faixa(d.sensacao.max);
+      return el("button", {
+        class: "dia", type: "button", "aria-pressed": String(i === selecionado),
+        "aria-label": `${rotuloDia(d)} ${ddmm(d.data)}: nível ${d.nivel}, ${d.nome}; sensação térmica até ${f0(d.sensacao.max)} graus`,
+        onclick: () => { selecionado = i; renderTudo(); },
+      },
+        el("div", { class: "cab" }, el("b", {}, rotuloDia(d)), el("span", {}, ddmm(d.data))),
+        el("span", { class: "chip", style: `background:${d.cor_bg};color:${d.cor_fg}` }, el("i", {}, String(d.nivel)), d.nome),
+        el("div", { class: "sens" }, el("span", {}, "Sensação máxima"),
+          el("div", {}, el("i", { class: "pt", style: `background:${fx.cor}` }), el("strong", {}, grau(d.sensacao.max)))),
+        el("div", { class: "cond" }, icone(d.codigo, 28), d.condicao),
+        el("div", { class: "info" }, `Temp. ${grau(d.temp.max)} / ${grau(d.temp.min)}`, el("br"),
+          `Chuva ${f1(d.chuva_mm)} mm${d.chance_chuva_10mm >= 10 ? ` · ${f0(d.chance_chuva_10mm)}% ≥10 mm` : ""}`),
+        d.noite_quente ? el("span", { class: "marca-noite" }, "Madrugada quente") : null,
+      );
+    }));
   }
 
   // ------------------------------------------------------------------ gráficos
@@ -170,20 +210,19 @@
   const linhaV = (g, x, y1, y2, cor) => g.append("line").attr("x1", x).attr("x2", x).attr("y1", y1).attr("y2", y2).style("stroke", cor).style("stroke-width", 1).attr("shape-rendering", "crispEdges");
   const texto = (g, x, y, t, { ancora = "start", cor = "var(--muda)", tam = 11.5, peso = 400 } = {}) =>
     g.append("text").attr("x", x).attr("y", y).attr("dy", "0.32em").attr("text-anchor", ancora).style("fill", cor).style("font-size", `${tam}px`).style("font-weight", peso).text(t);
-  const UMA_HORA = 3600000;
   const dominioX = [T[0], new Date(+T[T.length - 1] + UMA_HORA)];
+  const meio = (i) => new Date(+T[i] + UMA_HORA / 2);
   const rotuloHora = (i) => `${SEM[T[i].getUTCDay()]} ${String(T[i].getUTCDate()).padStart(2, "0")}/${String(T[i].getUTCMonth() + 1).padStart(2, "0")}, ${T[i].getUTCHours()}h`;
 
-  function eixoDias(svg, x, m, h, comRotulo) {
+  function eixoDias(svg, x, m, h) {
     const fundo = svg.append("g").attr("class", "eixo");
     DIAS.forEach((d, i) => {
       const x0 = x(dataDe(`${d.data}T00:00`)), x1 = x(new Date(+dataDe(`${d.data}T00:00`) + 24 * UMA_HORA));
       if (i === selecionado) fundo.append("rect").attr("x", x0).attr("y", m.t).attr("width", x1 - x0).attr("height", h - m.t - m.b).style("fill", "var(--lavagem)");
       if (i > 0) linhaV(fundo, x0, m.t - 6, h - m.b, "var(--grade)");
-      if (comRotulo) texto(fundo, (x0 + x1) / 2, m.t - 14, x1 - x0 > 70 ? `${SEM[dataDe(d.data).getUTCDay()]} ${ddmm(d.data)}` : ddmm(d.data),
-        { ancora: "middle", cor: i === selecionado ? "var(--tinta)" : "var(--muda)", peso: i === selecionado ? 600 : 400 });
+      texto(fundo, (x0 + x1) / 2, m.t - 14, x1 - x0 > 70 ? `${SEM[dataDe(d.data).getUTCDay()]} ${ddmm(d.data)}` : ddmm(d.data),
+        { ancora: "middle", cor: i === selecionado ? "var(--tinta)" : "var(--muda)", peso: i === selecionado ? 650 : 400 });
     });
-    return fundo;
   }
   function linhaAgora(svg, x, m, h) {
     if (AGORA.quando < +dominioX[0] || AGORA.quando > +dominioX[1]) return;
@@ -191,13 +230,13 @@
     linhaV(svg, xa, m.t, h - m.b, "var(--tinta2)");
     texto(svg, xa + 4, h - m.b - 8, "agora", { cor: "var(--tinta2)" });
   }
-  function cruz(svg, x, m, w, h, aoMostrar, aoClicar) {
+  function cruz(svg, x, m, w, h, aoMostrar) {
     const linha = svg.append("line").style("stroke", "var(--eixo)").style("stroke-width", 1).style("display", "none");
     const pontos = svg.append("g");
     let atual = 0;
     const mostrar = (i, cx, cy) => {
       atual = i;
-      const px = x(T[i]) + (x(new Date(+T[i] + UMA_HORA)) - x(T[i])) / 2;
+      const px = x(meio(i));
       linha.attr("x1", px).attr("x2", px).attr("y1", m.t).attr("y2", h - m.b).style("display", null);
       pontos.selectAll("*").remove();
       const r = aoMostrar(i, pontos, px);
@@ -206,104 +245,105 @@
     };
     const esconder = () => { linha.style("display", "none"); pontos.selectAll("*").remove(); esconderTip(); };
     const indice = (px) => Math.max(0, Math.min(T.length - 1, Math.floor((+x.invert(px) - +T[0]) / UMA_HORA)));
+    const selecionarPorHora = (i) => {
+      const j = DIAS.findIndex((d) => d.data === H.tempo[i].slice(0, 10));
+      if (j >= 0 && j !== selecionado) { selecionado = j; renderTudo(); }
+    };
     svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", w - m.l - m.r).attr("height", h - m.t - m.b).style("fill", "transparent").style("cursor", "crosshair")
       .on("pointermove", (ev) => mostrar(indice(d3.pointer(ev)[0]), ev.clientX, ev.clientY))
       .on("pointerleave", esconder)
-      .on("click", (ev) => aoClicar && aoClicar(indice(d3.pointer(ev)[0])));
+      .on("click", (ev) => selecionarPorHora(indice(d3.pointer(ev)[0])));
     svg.attr("tabindex", 0).on("focus", () => mostrar(atual)).on("blur", esconder).on("keydown", (ev) => {
       if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") { ev.preventDefault(); mostrar(Math.max(0, Math.min(T.length - 1, atual + (ev.key === "ArrowLeft" ? -1 : 1)))); }
     });
   }
-  const selecionarPorHora = (i) => {
-    const dia = H.tempo[i].slice(0, 10), j = DIAS.findIndex((d) => d.data === dia);
-    if (j >= 0 && j !== selecionado) { selecionado = j; renderTudo(); }
-  };
 
   function graficoCalor() {
-    const div = $("graf-calor"), w = largura(div), h = w < 600 ? 300 : 360;
-    const m = { t: 34, r: w < 600 ? 12 : 78, b: 26, l: 38 };
+    const div = $("graf-calor"), w = largura(div), h = Math.round(Math.max(280, Math.min(420, w * 0.34)));
+    const m = { t: 34, r: w < 640 ? 12 : 84, b: 26, l: 38 };
     div.replaceChildren();
     const svg = d3.select(div).append("svg").attr("width", w).attr("height", h).attr("role", "img")
-      .attr("aria-label", "Sensação térmica e temperatura hora a hora nos próximos 5 dias");
+      .attr("aria-label", "Sensação térmica e temperatura do ar hora a hora nos próximos 5 dias");
     const x = d3.scaleUtc().domain(dominioX).range([m.l, w - m.r]);
-    const meio = (i) => new Date(+T[i] + UMA_HORA / 2);
     const minM = H.sensacao_ecmwf.map((v, i) => Math.min(v, H.sensacao_gfs[i])), maxM = H.sensacao_ecmwf.map((v, i) => Math.max(v, H.sensacao_gfs[i]));
-    const lo = Math.floor(Math.min(d3.min(H.temp), d3.min(minM)) - 2), hi = Math.ceil(Math.max(d3.max(maxM), 30) + 2);
+    const lo = Math.floor(Math.min(d3.min(H.temp), d3.min(minM)) - 2), hi = Math.ceil(Math.max(d3.max(maxM), 30) + 3);
     const y = d3.scaleLinear().domain([lo, hi]).nice(6).range([h - m.b, m.t]);
     const [y0, y1] = y.domain();
     const fundo = svg.append("g");
-    FAIXAS.forEach((f) => {
+    FAIXAS.slice(1).forEach((f) => {
       const a = Math.max(f.de, y0), b = Math.min(f.ate, y1);
       if (b <= a) return;
       fundo.append("rect").attr("x", m.l).attr("width", w - m.l - m.r).attr("y", y(b)).attr("height", y(a) - y(b)).style("fill", f.cor).style("fill-opacity", "var(--faixa-op)");
       if (m.r > 40 && y(a) - y(b) > 12) texto(fundo, w - m.r + 6, (y(a) + y(b)) / 2, `${f.nome} ≥${f.de}°`, { cor: "var(--tinta2)", tam: 11 });
     });
-    eixoDias(svg, x, m, h, true);
+    eixoDias(svg, x, m, h);
     const eixo = svg.append("g").attr("class", "eixo");
     y.ticks(6).forEach((t) => { linhaH(eixo, m.l, w - m.r, y(t), "var(--grade)"); texto(eixo, m.l - 6, y(t), `${f0(t)}°`, { ancora: "end" }); });
-    [0, 6, 12, 18].forEach((hh) => T.forEach((t, i) => { if (t.getUTCHours() === hh && hh !== 0 && w > 700) texto(eixo, x(meio(i)), h - m.b + 14, `${hh}h`, { ancora: "middle" }); }));
-    const plot = svg.append("g");
-    plot.append("path").datum(T.map((_, i) => i)).attr("d", d3.area().x((i) => x(meio(i))).y0((i) => y(minM[i])).y1((i) => y(maxM[i])))
+    if (w > 720) T.forEach((t, i) => { const hh = t.getUTCHours(); if (hh === 6 || hh === 12 || hh === 18) texto(eixo, x(meio(i)), h - m.b + 14, `${hh}h`, { ancora: "middle" }); });
+    const plot = svg.append("g"), idx = T.map((_, i) => i);
+    plot.append("path").datum(idx).attr("d", d3.area().x((i) => x(meio(i))).y0((i) => y(minM[i])).y1((i) => y(maxM[i])))
       .style("fill", "var(--tinta)").style("fill-opacity", 0.08);
-    const linha = (arr, cor, larg) => plot.append("path").datum(T.map((_, i) => i)).attr("d", d3.line().x((i) => x(meio(i))).y((i) => y(arr[i])))
+    const linha = (arr, cor, larg) => plot.append("path").datum(idx).attr("d", d3.line().x((i) => x(meio(i))).y((i) => y(arr[i])))
       .style("fill", "none").style("stroke", cor).style("stroke-width", larg).style("stroke-linejoin", "round").style("stroke-linecap", "round");
-    linha(H.temp, "var(--s1)", 2);
-    linha(H.sensacao, "var(--tinta)", 2.5);
+    linha(H.temp, "var(--temp)", 1.5);
+    linha(H.sensacao, "var(--tinta)", 3);
+    // pico da sensação em cada dia (rótulo seletivo: o máximo do dia)
+    DIAS.forEach((d) => {
+      let im = -1;
+      H.tempo.forEach((t, i) => { if (t.startsWith(d.data) && (im < 0 || H.sensacao[i] > H.sensacao[im])) im = i; });
+      if (im < 0) return;
+      const px = x(meio(im)), py = y(H.sensacao[im]);
+      plot.append("circle").attr("cx", px).attr("cy", py).attr("r", 4.5).style("fill", faixa(H.sensacao[im]).cor).style("stroke", "var(--superficie)").style("stroke-width", 2);
+      texto(plot, px, py - 13, `${f0(H.sensacao[im])}°`, { ancora: "middle", cor: "var(--tinta)", tam: 12.5, peso: 700 });
+    });
     linhaAgora(svg, x, m, h);
     cruz(svg, x, m, w, h, (i, g, px) => {
-      [[H.sensacao[i], "var(--tinta)"], [H.temp[i], "var(--s1)"]].forEach(([v, cor]) => g.append("circle").attr("cx", px).attr("cy", y(v)).attr("r", 4)
+      [[H.sensacao[i], "var(--tinta)"], [H.temp[i], "var(--temp)"]].forEach(([v, cor]) => g.append("circle").attr("cx", px).attr("cy", y(v)).attr("r", 4)
         .style("fill", cor).style("stroke", "var(--superficie)").style("stroke-width", 2));
       return { titulo: rotuloHora(i), linhas: [
-        { valor: grauC(H.sensacao[i]), rotulo: `sensação térmica · ${faixaDe(H.sensacao[i])}`, cor: "var(--tinta)" },
-        { valor: grauC(H.temp[i]), rotulo: "temperatura do ar", cor: "var(--s1)" },
+        { valor: grauC(H.sensacao[i]), rotulo: `sensação térmica · ${faixa(H.sensacao[i]).nome}`, cor: "var(--tinta)" },
+        { valor: grauC(H.temp[i]), rotulo: "temperatura do ar", cor: "var(--temp)" },
         { valor: `${f0(minM[i])}–${f0(maxM[i])}°`, rotulo: "sensação: faixa entre os modelos" },
         { valor: `${f0(H.umidade[i])}%`, rotulo: `umidade · vento ${f0(H.vento[i])} km/h` },
       ] };
-    }, selecionarPorHora);
+    });
     TABELAS["graf-calor"] = { colunas: ["Hora", "Sensação térmica (°C)", "Faixa", "Temperatura (°C)", "ECMWF (°C)", "GFS (°C)", "Umidade (%)", "Vento (km/h)"],
-      linhas: T.map((_, i) => [rotuloHora(i), f1(H.sensacao[i]), faixaDe(H.sensacao[i]), f1(H.temp[i]), f1(H.sensacao_ecmwf[i]), f1(H.sensacao_gfs[i]), f0(H.umidade[i]), f0(H.vento[i])]) };
-    legendaCalor();
-  }
-  function legendaCalor() {
-    $("legenda-calor").replaceChildren(
+      linhas: T.map((_, i) => [rotuloHora(i), f1(H.sensacao[i]), faixa(H.sensacao[i]).nome, f1(H.temp[i]), f1(H.sensacao_ecmwf[i]), f1(H.sensacao_gfs[i]), f0(H.umidade[i]), f0(H.vento[i])]) };
+    trocar($("legenda-calor"),
       el("span", {}, el("i", { class: "k-linha", style: "background:var(--tinta);height:3px" }), "Sensação térmica (UTCI)"),
-      el("span", {}, el("i", { class: "k-linha", style: "background:var(--s1)" }), "Temperatura do ar"),
+      el("span", {}, el("i", { class: "k-linha", style: "background:var(--temp)" }), "Temperatura do ar"),
       el("span", {}, el("i", { class: "k-caixa", style: "background:var(--tinta);opacity:.12" }), "Diferença entre os modelos"),
-      ...FAIXAS.map((f) => el("span", {}, el("i", { class: "k-caixa", style: `background:${f.cor};opacity:.45` }), `${f.nome} (≥${f.de}°)`)),
+      ...FAIXAS.slice(1).map((f) => el("span", {}, el("i", { class: "k-caixa", style: `background:${f.cor};opacity:.5` }), `${f.nome} (≥${f.de}°)`)),
     );
   }
 
   function graficoChuva() {
     const div = $("graf-chuva"), w = largura(div), h = 170;
-    const m = { t: 26, r: w < 600 ? 12 : 78, b: 22, l: 38 };
+    const m = { t: 26, r: w < 640 ? 12 : 84, b: 22, l: 38 };
     div.replaceChildren();
     const svg = d3.select(div).append("svg").attr("width", w).attr("height", h).attr("role", "img").attr("aria-label", "Chuva prevista por hora");
     const x = d3.scaleUtc().domain(dominioX).range([m.l, w - m.r]);
     const max = d3.max(H.chuva) || 0;
     const y = d3.scaleLinear().domain([0, Math.max(1, max * 1.1)]).nice(3).range([h - m.b, m.t]);
-    eixoDias(svg, x, m, h, true);
+    eixoDias(svg, x, m, h);
     const eixo = svg.append("g").attr("class", "eixo");
     y.ticks(3).forEach((t) => { linhaH(eixo, m.l, w - m.r, y(t), t === 0 ? "var(--eixo)" : "var(--grade)"); texto(eixo, m.l - 6, y(t), f1(t), { ancora: "end" }); });
     const passo = x(new Date(+T[0] + UMA_HORA)) - x(T[0]), larg = Math.max(1, Math.min(24, passo - 1));
     H.chuva.forEach((v, i) => {
       if (!(v > 0.05)) return;
       const x0 = x(T[i]) + (passo - larg) / 2, topo = y(v), base = y(0), r = Math.min(2, larg / 2, base - topo);
-      svg.append("path").attr("d", `M${x0},${base}V${topo + r}Q${x0},${topo} ${x0 + r},${topo}H${x0 + larg - r}Q${x0 + larg},${topo} ${x0 + larg},${topo + r}V${base}Z`).style("fill", "var(--s1)");
+      svg.append("path").attr("d", `M${x0},${base}V${topo + r}Q${x0},${topo} ${x0 + r},${topo}H${x0 + larg - r}Q${x0 + larg},${topo} ${x0 + larg},${topo + r}V${base}Z`).style("fill", "var(--acento)");
     });
     if (max <= 0.05) texto(svg, (m.l + w - m.r) / 2, (m.t + h - m.b) / 2, "Sem chuva prevista no período", { ancora: "middle", cor: "var(--tinta2)", tam: 13 });
     linhaAgora(svg, x, m, h);
-    cruz(svg, x, m, w, h, (i) => ({ titulo: rotuloHora(i), linhas: [{ valor: `${f1(H.chuva[i])} mm`, rotulo: "chuva na hora", cor: "var(--s1)" }] }), selecionarPorHora);
+    cruz(svg, x, m, w, h, (i) => ({ titulo: rotuloHora(i), linhas: [{ valor: `${f1(H.chuva[i])} mm`, rotulo: "chuva na hora", cor: "var(--acento)" }] }));
     TABELAS["graf-chuva"] = { colunas: ["Hora", "Chuva (mm)"], linhas: T.map((_, i) => [rotuloHora(i), f1(H.chuva[i])]) };
   }
-  function desenharGraficos() {
-    esconderTip();
-    graficoCalor(); graficoChuva();
-    ["graf-calor", "graf-chuva"].forEach(vistaTabela);
-  }
+  function desenharGraficos() { esconderTip(); graficoCalor(); graficoChuva(); ["graf-calor", "graf-chuva"].forEach(vistaTabela); }
 
   // ------------------------------------------------------------------ níveis
   function renderNiveis() {
-    $("niveis").replaceChildren(...[1, 2, 3, 4, 5].map((n) => {
+    trocar($("niveis"), ...[1, 2, 3, 4, 5].map((n) => {
       const c = P.niveis[n];
       return el("div", { class: "nivel-linha" },
         el("span", { class: "chip", style: `background:${c.cor_bg};color:${c.cor_fg}` }, el("i", {}, String(n)), c.nome),
@@ -313,25 +353,21 @@
   }
 
   // ------------------------------------------------------------------ detalhes técnicos
-  const corBio = (v) => (v >= 48 ? ["#6b21a8", "#fff"] : v >= 38 ? ["#dc2626", "#fff"] : v >= 34 ? ["#ea580c", "#fff"] : v >= 28 ? ["#facc15", "#111"]
-    : v >= 12 ? ["#74c476", "#111"] : v >= 6 ? ["#6baed6", "#111"] : v >= 0 ? ["#3182bd", "#fff"] : ["#08519c", "#fff"]);
+  const corBio = (v) => { const f = faixa(v); return v >= 12 ? [f.cor, f.texto] : v >= 6 ? ["#6baed6", "#111"] : v >= 0 ? ["#3182bd", "#fff"] : ["#08519c", "#fff"]; };
   const corIbutg = (v) => (v >= 33 ? ["#6b21a8", "#fff"] : v >= 30 ? ["#dc2626", "#fff"] : v >= 28 ? ["#ea580c", "#fff"] : v >= 24 ? ["#facc15", "#111"] : ["#74c476", "#111"]);
   const pilula = (v, hora, cor) => { const [bg, fg] = cor(v); return el("span", { class: "pilula", style: `background:${bg};color:${fg}` }, `${f1(v)}° (${hora})`); };
   const minMax = (x, cor) => el("span", {}, pilula(x.min, x.h_min, cor), " – ", pilula(x.max, x.h_max, cor));
   let modeloTec = "ecmwf";
   function renderTecnico() {
-    const seg = $("modelo-tec");
-    seg.replaceChildren(...[["ecmwf", "ECMWF IFS"], ["gfs", "NOAA GFS"]].map(([k, r]) =>
+    trocar($("modelo-tec"), ...[["ecmwf", "ECMWF IFS"], ["gfs", "NOAA GFS"]].map(([k, r]) =>
       el("button", { type: "button", "aria-pressed": String(k === modeloTec), onclick: () => { modeloTec = k; renderTecnico(); } }, r)));
     const pct = (v) => (v == null ? "—" : `${f0(v)}%`);
     const linhas = [
-      ["Condição", (d, x) => `${x.condicao}`],
+      ["Condição", (d, x) => x.condicao],
       ["Estabilidade", (d, x) => el("span", { class: "pilula", style: `background:${x.estabilidade.bg};color:${x.estabilidade.fg}` }, x.estabilidade.texto)],
+      ["Sensação térmica (UTCI)", (d, x) => minMax(x.utci, corBio)],
       ["Temperatura do ar", (d, x) => minMax(x.t2m, corBio)],
-      ["UTCI", (d, x) => minMax(x.utci, corBio)],
-      ["PET", (d, x) => minMax(x.pet, corBio)],
       ["IBUTG (ocupacional)", (d, x) => minMax(x.ibutg, corIbutg)],
-      ["Índice de calor", (d, x) => minMax(x.hi, corBio)],
       ["Chuva no centro / máx. vizinhança", (d, x) => `${f1(x.chuva_mm)} / ${f1(x.chuva_max_grade_mm)} mm`],
       ["NMEP ≥10 / ≥25 / ≥50 mm", (d, x) => `${pct(x.nmep_10)} / ${pct(x.nmep_25)} / ${pct(x.nmep_50)}`],
       ["Umidade relativa", (d, x) => `${f0(x.ur_min)}–${f0(x.ur_max)}%`],
@@ -344,9 +380,8 @@
       ["Pico do IBUTG (consenso)", (d) => `${f1(d.pico_ibutg)} °C`],
       ["Taxa metabólica admissível (NR-15)", (d) => `${f0(d.m_adm)} W · ${d.classe_madm}`],
     ];
-    const t = el("table", {}, el("thead", {}, el("tr", {}, el("th", { scope: "col" }, ""), ...DIAS.map((d) => el("th", { scope: "col" }, `${d.dia_semana} ${ddmm(d.data)}`)))),
-      el("tbody", {}, ...linhas.map(([rot, f]) => el("tr", {}, el("td", {}, rot), ...DIAS.map((d) => el("td", {}, f(d, d.modelos[modeloTec])))))));
-    $("tabela-tec").replaceChildren(t);
+    trocar($("tabela-tec"), el("table", {}, el("thead", {}, el("tr", {}, el("th", { scope: "col" }, ""), ...DIAS.map((d) => el("th", { scope: "col" }, `${d.dia_semana} ${ddmm(d.data)}`)))),
+      el("tbody", {}, ...linhas.map(([rot, f]) => el("tr", {}, el("td", {}, rot), ...DIAS.map((d) => el("td", {}, f(d, d.modelos[modeloTec]))))))));
   }
 
   // ------------------------------------------------------------------ tema, redimensionamento e início
@@ -361,7 +396,7 @@
     rotularTema();
   });
 
-  function renderTudo() { renderDestaque(); renderDias(); desenharGraficos(); }
+  function renderTudo() { renderAlerta(); renderSensacao(); renderTempo(); renderDias(); desenharGraficos(); }
   let espera, larguraAnterior = document.querySelector("main").clientWidth;
   new ResizeObserver(() => {
     const w = document.querySelector("main").clientWidth;

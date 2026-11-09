@@ -93,9 +93,7 @@ def processar_modelo(respostas, idx_centro: int) -> pd.DataFrame:
         "precip_center": var["precipitation"], "precip_grid_mean": chuva_grade.mean(axis=0), "precip_grid_max": chuva_grade.max(axis=0),
         "weather_code": var["weather_code"], "tmrt": tmrt,
         "utci": indices.utci(t2m, tmrt, vento_ms, ur),
-        "pet": indices.pet(t2m, tmrt, vento_ms, ur),
         "wbgt": indices.ibutg_iso7243(t2m, ur, vento_ms, dir_h + dif, tmrt),
-        "heat_index": indices.indice_calor_noaa(t2m, ur),
     })
 
 

@@ -11,8 +11,28 @@ pelo GitHub Pages. Uma automação (GitHub Actions) refaz a previsão a cada 3 h
 - **Próximos 5 dias:** nível, condição do tempo, máxima e mínima, sensação térmica e chuva.
 - **Hora a hora:** sensação térmica (UTCI) e temperatura, com as faixas do protocolo e a diferença
   entre os modelos; chuva por hora.
-- **Detalhes técnicos:** ECMWF × GFS, UTCI, PET, IBUTG (escala ocupacional), índice de calor, chuva,
+- **Detalhes técnicos:** ECMWF × GFS, UTCI, IBUTG (escala ocupacional), chuva,
   probabilidade de chuva forte na vizinhança (NMEP), vento, gatilho e taxa metabólica admissível (NR-15).
+
+## Página
+
+- Layout fluido (CSS grid e `clamp()`), testado de 320 px (celular) a 2560 px (monitor): 1, 2 ou 3 colunas
+  conforme a largura, sem rolagem lateral. Tema claro e escuro.
+- A sensação térmica (UTCI), que aciona os gatilhos, é o número principal: quadro próprio com régua das faixas
+  do protocolo e horas acima de 28, 34 e 38 °C; destaque nos cartões dos dias e no gráfico hora a hora.
+- Botão "Compartilhar este alerta" (WhatsApp ou menu de compartilhamento do celular) e imagem de prévia
+  (`docs/img/compartilhar.png`) para links enviados em aplicativos.
+- Logos em `docs/img/`: barra institucional (DVS/SMS, SUS, Prefeitura de Porto Alegre) e marca do CISC.
+- Sem frameworks de CSS: HTML, CSS próprio e D3 (gráficos), sem dependências externas na hora de abrir.
+
+## Versão anterior (cópia de segurança)
+
+A primeira versão do painel (09/11/2026) está guardada de três formas:
+- marca de versão `v1` e ramo `painel-v1` no repositório;
+- cópia navegável, com dados congelados, em `docs/versao-anterior/`
+  (https://ciscpoa.github.io/protocolo_de_calor_Porto_Alegre/versao-anterior/).
+
+Para voltar à versão anterior: `git checkout v1 -- docs/index.html docs/app.js` e enviar (push).
 
 ## Como o nível é calculado
 
@@ -45,7 +65,7 @@ Depois, abra `docs/index.html` no navegador (funciona sem servidor).
 
 | Arquivo | Conteúdo |
 |---|---|
-| `calor/indices.py` | Geometria solar, Tmrt (ERA5), UTCI, IBUTG, índice de calor, PET |
+| `calor/indices.py` | Geometria solar, Tmrt (ERA5-HEAT), UTCI e IBUTG |
 | `calor/protocolo.py` | Gatilhos diários, rampa, acúmulo, rescaldo, estabilidade do tempo e textos para o público |
 | `calor/previsao.py` | Download (Open-Meteo), vizinhança de 55 km e probabilidade de chuva (NMEP) |
 | `gerar_painel.py` | Junta tudo e grava `docs/dados/previsao.js` e `previsao.json` |
@@ -57,8 +77,9 @@ Depois, abra `docs/index.html` no navegador (funciona sem servidor).
 - **UTCI:** usa a implementação de referência da biblioteca pythermalcomfort (mesmos coeficientes de
   Bröde et al., 2012, e mesma pressão de vapor de Hardy ITS-90 do código original). Na cópia do código,
   os operadores `*` e `**` do polinômio se perderam.
-- **Operadores restaurados:** haversine (`** 2`), índice de calor da NOAA (`tf ** 2`, `rh ** 2`) e
-  coeficiente de convecção do globo no IBUTG (`6,3 · v^0,6 / D^0,4`).
+- **Operadores restaurados:** haversine (`** 2`) e coeficiente de convecção do globo no IBUTG
+  (`6,3 · v^0,6 / D^0,4`).
+- **PET e índice de calor da NOAA** foram retirados: não fazem parte da análise do protocolo.
 - **Tmrt no esquema ERA5-HEAT completo** (Di Napoli et al., 2020), o método declarado no código
   (`METODO_TMRT = 'ECMWF_ERA5'`): fator de área projetada `0,308·cos[h·(0,998 − h²/50000)]` com h em graus
   (o código usava `γ²/4,92` com γ em radianos) e radiação direta normal ao sol, no instante da hora (o

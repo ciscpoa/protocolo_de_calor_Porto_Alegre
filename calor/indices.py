@@ -1,10 +1,11 @@
-"""Índices térmicos do protocolo: geometria solar, Tmrt, UTCI, IBUTG (WBGT), índice de calor e PET.
+"""Índices térmicos do protocolo: geometria solar, Tmrt, UTCI e IBUTG (WBGT).
 
 Fórmulas do código original do protocolo (Temporada 2026/2027), com estes ajustes:
 - UTCI: polinômio de Bröde et al. (2012) pela implementação de referência da pythermalcomfort,
   que usa os mesmos coeficientes e a mesma pressão de vapor de Hardy (ITS-90) do código original.
-- Os operadores de potência perdidos na cópia do código (haversine, índice de calor, IBUTG) foram
-  restaurados conforme as fórmulas publicadas (NOAA/Rothfusz; ISO 7243).
+- Os operadores de potência perdidos na cópia do código (haversine, IBUTG) foram restaurados conforme
+  as fórmulas publicadas (ISO 7243).
+- PET e índice de calor da NOAA saíram: não são usados pelo protocolo.
 - Tmrt no esquema ERA5-HEAT completo (Di Napoli et al., 2020), o método declarado no código
   (METODO_TMRT = 'ECMWF_ERA5'): fator de área projetada de Jendritzky com a elevação em graus e
   radiação direta normal ao sol (I*). O código original usava γ²/4,92 e a direta horizontal.
@@ -13,7 +14,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from pythermalcomfort.models import pet_steady
 from pythermalcomfort.models import utci as utci_referencia
 
 
@@ -99,37 +99,3 @@ def ibutg_iso7243(ta, ur, va, rad_solar, tmrt) -> np.ndarray:
     hr = 5.7
     tg = (hc * ta + hr * np.asarray(tmrt, dtype=np.float64)) / (hc + hr)
     return 0.7 * tnw + 0.2 * tg + 0.1 * ta
-
-
-def indice_calor_noaa(ta, ur) -> np.ndarray:
-    """Índice de calor da NOAA (°C), Rothfusz com ajustes."""
-    ta = np.asarray(ta, dtype=np.float64)
-    ur = np.asarray(ur, dtype=np.float64)
-    tf = ta * 1.8 + 32.0
-    simples = 0.5 * (tf + 61.0 + (tf - 68.0) * 1.2 + ur * 0.094)
-    roth = (-42.379 + 2.04901523 * tf + 10.14333127 * ur - 0.22475541 * tf * ur - 0.00683783 * tf ** 2
-            - 0.05481717 * ur ** 2 + 0.00122874 * tf ** 2 * ur + 0.00085282 * tf * ur ** 2
-            - 0.00000199 * tf ** 2 * ur ** 2)
-    adj1 = ((13.0 - ur) / 4.0) * np.sqrt(np.maximum(0.0, (17.0 - np.abs(tf - 95.0)) / 17.0))
-    roth = np.where((ur < 13.0) & (tf >= 80.0) & (tf <= 112.0), roth - adj1, roth)
-    adj2 = ((ur - 85.0) / 10.0) * ((87.0 - tf) / 5.0)
-    roth = np.where((ur > 85.0) & (tf >= 80.0) & (tf <= 87.0), roth + adj2, roth)
-    hi_f = np.where((simples + tf) / 2.0 >= 80.0, roth, simples)
-    return (hi_f - 32.0) / 1.8
-
-
-def pet(ta, tmrt, va, ur) -> np.ndarray:
-    """PET (°C) com vento a 1,1 m (0,68 × vento a 10 m), met 1,35 e clo 0,9, como no código original."""
-    v = np.maximum(0.1, np.asarray(va, dtype=np.float64) * 0.68)
-    ta, tmrt, ur = (np.asarray(x, dtype=np.float64) for x in (ta, tmrt, ur))
-    try:
-        valores = np.asarray(pet_steady(tdb=ta, tr=tmrt, v=v, rh=ur, met=1.35, clo=0.9).pet, dtype=np.float64)
-    except Exception:  # versões antigas só aceitam escalares
-        valores = []
-        for t, tr, vv, r in zip(ta, tmrt, v, ur):
-            try:
-                valores.append(float(pet_steady(tdb=float(t), tr=float(tr), v=float(vv), rh=float(r), met=1.35, clo=0.9).pet))
-            except Exception:
-                valores.append(np.nan)
-        valores = np.asarray(valores, dtype=np.float64)
-    return pd.Series(valores).interpolate().bfill().ffill().to_numpy()

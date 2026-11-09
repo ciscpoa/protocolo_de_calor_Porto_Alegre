@@ -58,8 +58,7 @@ def resumo_modelo(dia: pd.DataFrame, nmep: dict | None) -> dict:
         "ur_min": dia["rh2m"].min(), "ur_max": dia["rh2m"].max(),
         "vento_min": dia["wind_kmh"].min(), "vento_max": dia["wind_kmh"].max(), "rajada_max": dia["wind_gust_kmh"].max(),
         "vento_dir": direcao, "vento_seta": seta,
-        "t2m": extremos(dia, "t2m"), "utci": extremos(dia, "utci"), "pet": extremos(dia, "pet"),
-        "ibutg": extremos(dia, "wbgt"), "hi": extremos(dia, "heat_index"),
+        "t2m": extremos(dia, "t2m"), "utci": extremos(dia, "utci"), "ibutg": extremos(dia, "wbgt"),
     }
 
 
@@ -77,13 +76,13 @@ def main() -> None:
     pontos, centro = previsao.pontos_vizinhanca()
     print(f"Vizinhança: {len(pontos)} pontos num raio de {previsao.RAIO_KM:.0f} km")
     det = previsao.baixar_deterministico(om, pontos)
-    print("Calculando índices (UTCI, PET, IBUTG, índice de calor)...")
+    print("Calculando índices (UTCI e IBUTG)...")
     ec, gf = previsao.processar_modelo(det["ecmwf"], centro), previsao.processar_modelo(det["gfs"], centro)
     if not ec["time"].equals(gf["time"]):
         raise SystemExit("os horários do ECMWF e do GFS não coincidem")
 
     mme = pd.DataFrame({"time": ec["time"]})
-    for nome, col in [("T2M", "t2m"), ("UTCI", "utci"), ("PET", "pet"), ("WBGT", "wbgt"), ("HI", "heat_index")]:
+    for nome, col in [("T2M", "t2m"), ("UTCI", "utci"), ("WBGT", "wbgt")]:
         mme[f"{nome}_MME"] = (ec[col] + gf[col]) / 2.0
     for df in (ec, gf, mme):
         df["date"] = df["time"].dt.date

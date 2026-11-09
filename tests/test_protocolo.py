@@ -87,6 +87,4 @@ def test_acumulo_e_rescaldo():
 def test_indices_valores_de_referencia():
     # UTCI: exemplo da documentação da pythermalcomfort (Ta = Tmrt = 25 °C, vento 1 m/s, UR 50%) = 24,6 °C
     assert float(indices.utci(25.0, 25.0, 1.0, 50.0)) == pytest.approx(24.6, abs=0.1)
-    # Índice de calor da NOAA: 90 °F (32,2 °C) e 60% de UR ≈ 100 °F (37,8 °C)
-    assert float(indices.indice_calor_noaa(32.22, 60.0)) == pytest.approx(37.8, abs=0.6)
     assert indices.utci(np.array([30.0, 35.0]), np.array([30.0, 50.0]), np.array([0.1, 25.0]), np.array([50.0, 50.0])).shape == (2,)
