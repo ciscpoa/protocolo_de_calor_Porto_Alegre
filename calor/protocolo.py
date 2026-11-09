@@ -3,10 +3,14 @@
 Mesmos gatilhos do código original:
 1. Nível de cada dia pela UTCI do consenso multimodelo (média ECMWF + GFS), com exigência de horas
    e filtro noturno para o Nível 2.
+1b. Persistência do Nível 2 (descrita no código original e agora aplicada): com madrugada amena
+   (mínima entre 20 e 22 °C), o N2 só vale a partir do 2º dia seguido de calor; com madrugada quente
+   (≥ 22 °C), vale já no 1º dia.
 2. Rampa antecipatória: dia em Nível 1 vira Nível 2 se o dia seguinte for Nível 3+ e a UTCI máxima
    do dia for ≥ 30 °C.
 3. Acúmulo: N2 por mais de 3 dias seguidos → N3; N3 por mais de 2 dias → N4; N4 por 2 dias ou mais → N5.
 4. Rescaldo: depois de um dia em N3+, um dia que cairia para N1 fica em N2.
+Por fim, o horário crítico é recalculado para o nível final do dia.
 
 Cada nível tem o texto técnico do código (gatilho) e um texto em linguagem simples para o público.
 """
@@ -21,7 +25,7 @@ NIVEIS = {
         "quando": "Sem calor relevante, ou calor durante o dia seguido de noite fresca (mínima abaixo de 20 °C)."},
     2: {"nome": "Atenção", "cor_fg": "#854d0e", "cor_bg": "#fef9c3", "acao": "Hidratação e vigilância aos idosos",
         "publico": ["Beba água mesmo sem sede.", "Fique de olho em idosos, crianças pequenas e pessoas com doenças crônicas."],
-        "quando": "Sensação térmica de 32 °C ou mais por 4 horas, ou de 28 °C ou mais por 7 horas, sem noite fresca."},
+        "quando": "Sensação térmica de 32 °C ou mais por 4 horas, ou de 28 °C ou mais por 7 horas: já no 1º dia se a madrugada for quente (22 °C ou mais); com madrugada amena (20 a 22 °C), a partir do 2º dia seguido."},
     3: {"nome": "Alerta", "cor_fg": "#c2410c", "cor_bg": "#ffedd5", "acao": "Pausas 45/15; evitar sol 10h-16h",
         "publico": ["Evite o sol das 10h às 16h.", "No trabalho ao ar livre, faça pausas: a cada 45 minutos, 15 de descanso na sombra.",
                     "Beba água com frequência."],
@@ -64,6 +68,7 @@ def avaliar_dia(dia: pd.DataFrame) -> dict:
     noite_quente = tmin_noite >= 22.0
     recuperacao_plena = tmin_noite < 20.0
     carga_n2 = (h_32 >= 4) or (h_n2 >= 7)
+    tipo_n2 = None
 
     if h_n5 > 1:
         nivel, gatilho = 5, f"UTCI ≥48°C por {h_n5}h (>1h)"
@@ -81,9 +86,11 @@ def avaliar_dia(dia: pd.DataFrame) -> dict:
         elif noite_quente:
             nivel, gatilho = 2, f"N2: Noite quente ({tmin_noite:.1f}°C) + Calor ({h_32}h ≥32°)"
             motivo = f"Calor durante o dia e madrugada quente (mínima de {tmin_noite:.0f} °C)."
+            tipo_n2 = "noite_quente"
         else:
             nivel, gatilho = 2, f"N2 potencial ({h_32}h ≥32° | {h_n2}h ≥28°)"
             motivo = f"Calor prolongado: sensação térmica de 28 °C ou mais por {h_n2} horas."
+            tipo_n2 = "potencial"
     else:
         nivel, gatilho = 1, "Normal (Carga insuficiente p/ N2)"
         motivo = "Sem calor intenso previsto."
@@ -102,15 +109,24 @@ def avaliar_dia(dia: pd.DataFrame) -> dict:
 
     return {"nivel": nivel, "gatilho": gatilho, "motivo": motivo, "m_adm": m_adm, "pico_ibutg": pico_ibutg,
             "tmin_noite": tmin_noite, "noite_quente": noite_quente, "recuperacao_plena": recuperacao_plena,
-            "candidato_n2": nivel == 2, "janela": janela, "janela_ini": h_ini, "janela_fim": h_fim,
+            "candidato_n2": nivel == 2, "tipo_n2": tipo_n2, "janela": janela, "janela_ini": h_ini, "janela_fim": h_fim,
+            "_niveis_h": niveis_h, "_horas": horas,
             "pico_utci": float(np.max(utci)), "pico_temp": float(np.max(t2m)),
             "horas_n2": h_n2, "horas_n3": h_n3, "horas_n4": h_n4, "horas_n5": h_n5, "horas_32": h_32}
 
 
 def aplicar_regras_multidiarias(diagnosticos: list[dict]) -> list[dict]:
     """Rampa antecipatória, acúmulo de dias e rescaldo (passos 2 a 4 do código original). Altera e devolve a lista."""
-    niveis = [d["nivel"] for d in diagnosticos]
     n = len(diagnosticos)
+    brutos = [d["nivel"] for d in diagnosticos]
+
+    # Passo 1b: persistência do N2 com madrugada amena — exige o dia anterior também com calor (N2+ bruto)
+    for i, d in enumerate(diagnosticos):
+        if d.get("tipo_n2") == "potencial" and not (i > 0 and brutos[i - 1] >= 2):
+            d.update(nivel=1, gatilho=f"N2 potencial: 1º dia com madrugada amena ({d['tmin_noite']:.1f}°C); aguarda persistência",
+                     motivo=f"Calor prolongado, mas é o 1º dia e a madrugada é amena (mínima de {d['tmin_noite']:.0f} °C). "
+                            "Se o calor continuar amanhã, o alerta sobe para Atenção.")
+    niveis = [d["nivel"] for d in diagnosticos]
 
     # Passo 2: rampa antecipatória (olha o nível bruto do dia seguinte)
     for i in range(n - 1):
@@ -146,7 +162,27 @@ def aplicar_regras_multidiarias(diagnosticos: list[dict]) -> list[dict]:
             niveis[i] = 2
             diagnosticos[i].update(nivel=2, gatilho="Rescaldo: D-1 em Alerta (Lag biometeorológico)",
                                    motivo="Recuperação: o dia anterior teve calor forte, e o corpo ainda precisa de cuidado.")
+
+    for d in diagnosticos:
+        _recalcular_janela(d)
     return diagnosticos
+
+
+def _recalcular_janela(d: dict) -> None:
+    """Horário crítico do nível final: horas no nível do dia (ou no maior nível horário alcançado, se o
+    dia subiu por acúmulo, rampa ou rescaldo), com mínimo de Atenção (UTCI ≥ 28 °C)."""
+    if "_niveis_h" not in d:
+        return
+    nh, horas = d["_niveis_h"], d["_horas"]
+    idx = []
+    if d["nivel"] > 1 and nh.max() >= 2:
+        idx = np.where(nh >= max(2, min(d["nivel"], int(nh.max()))))[0]
+    if len(idx):
+        d["janela_ini"], d["janela_fim"] = int(horas[idx[0]]), int(min(23, horas[idx[-1]] + 1))
+        d["janela"] = f"{d['janela_ini']:02d}h às {d['janela_fim']:02d}h"
+    else:
+        d["janela_ini"] = d["janela_fim"] = None
+        d["janela"] = "Sem janela crítica ativa"
 
 
 # ---------------------------------------------------------------------------- tempo (chuva, vento, condição)

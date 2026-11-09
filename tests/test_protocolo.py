@@ -36,9 +36,37 @@ def test_nivel2_por_exposicao_prolongada():
     assert protocolo.avaliar_dia(dia(29.0, 6, tmin_noite=21.0))["nivel"] == 1   # 6 h não basta
 
 
-def _diags(niveis, picos=None):
+def _diags(niveis, picos=None, tipos=None):
     picos = picos or [30.0] * len(niveis)
-    return [{"nivel": n, "pico_utci": p, "gatilho": "", "motivo": ""} for n, p in zip(niveis, picos)]
+    tipos = tipos or [None] * len(niveis)
+    return [{"nivel": n, "pico_utci": p, "gatilho": "", "motivo": "", "tipo_n2": t, "tmin_noite": 21.0}
+            for n, p, t in zip(niveis, picos, tipos)]
+
+
+def test_persistencia_do_nivel2_com_madrugada_amena():
+    # madrugada amena (20–22 °C): o N2 só vale a partir do 2º dia seguido de calor
+    r = protocolo.aplicar_regras_multidiarias(_diags([2, 2, 2], tipos=["potencial"] * 3))
+    assert [d["nivel"] for d in r] == [1, 2, 2] and "aguarda persistência" in r[0]["gatilho"]
+    # madrugada quente (≥ 22 °C): vale já no 1º dia
+    assert [d["nivel"] for d in protocolo.aplicar_regras_multidiarias(_diags([2], tipos=["noite_quente"]))] == [2]
+    # dia anterior sem calor: o potencial não se confirma
+    assert [d["nivel"] for d in protocolo.aplicar_regras_multidiarias(_diags([1, 2], tipos=[None, "potencial"]))] == [1, 1]
+
+
+def test_horario_critico_do_nivel_final():
+    # dia com UTCI 31 °C por 3 h (N1 bruto) antes de um dia de Alerta: sobe por rampa e ganha horário crítico
+    hoje = protocolo.avaliar_dia(dia(31.0, 3, tmin_noite=18.0, data="2026-12-01"))
+    amanha = protocolo.avaliar_dia(dia(35.0, 4, tmin_noite=18.0, data="2026-12-02"))
+    assert hoje["nivel"] == 1 and hoje["janela_ini"] is None
+    r = protocolo.aplicar_regras_multidiarias([hoje, amanha])
+    assert r[0]["nivel"] == 2 and (r[0]["janela_ini"], r[0]["janela_fim"]) == (12, 15)
+    assert r[1]["nivel"] == 3 and (r[1]["janela_ini"], r[1]["janela_fim"]) == (12, 16)
+
+
+def test_fator_area_projetada_jendritzky():
+    # fp = 0,308·cos[h·(0,998 − h²/50000)], h em graus
+    assert float(indices.fator_area_projetada(60.0)) == pytest.approx(0.308 * np.cos(np.radians(30 * (0.998 - 900 / 50000))), abs=1e-9)
+    assert float(indices.fator_area_projetada(0.0)) == pytest.approx(0.0785, abs=0.001)
 
 
 def test_rampa_antecipatoria():

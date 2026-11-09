@@ -175,7 +175,7 @@ footer { border-top: 1px solid var(--borda); padding: 16px 0 28px; font-size: 13
 
   <h2>O que significa cada nível</h2>
   <div class="niveis" id="niveis"></div>
-  <p class="nota" style="font-size:14px;color:var(--tinta2);max-width:900px">O alerta também considera vários dias: sobe um nível quando o calor se repete por dias seguidos, começa um dia antes quando um dia de calor forte está chegando e só baixa aos poucos depois de um dia de alerta, porque o corpo leva tempo para se recuperar.</p>
+  <p class="nota" style="font-size:14px;color:var(--tinta2);max-width:900px">O alerta também considera vários dias: com madrugadas amenas, a Atenção só começa no segundo dia de calor; o nível sobe quando o calor se repete por dias seguidos, começa um dia antes quando um dia de calor forte está chegando e só baixa aos poucos depois de um dia de alerta, porque o corpo leva tempo para se recuperar.</p>
 
   <h2>Cuidados no calor</h2>
   <div class="cuidados">
@@ -202,13 +202,14 @@ footer { border-top: 1px solid var(--borda); padding: 16px 0 28px; font-size: 13
     <ul>
       <li>Sensação térmica (UTCI) do consenso multimodelo: média do ECMWF IFS e do NOAA GFS, no centro de Porto Alegre (−30,08; −51,21).</li>
       <li>Nível 5: UTCI ≥ 48 °C por mais de 1 hora. Nível 4: ≥ 38 °C por mais de 2 horas. Nível 3: ≥ 34 °C por mais de 2 horas.</li>
-      <li>Nível 2: UTCI ≥ 32 °C por 4 horas ou ≥ 28 °C por 7 horas, desde que a mínima da madrugada (0h–6h) seja ≥ 20 °C. Com madrugada abaixo de 20 °C, o dia fica em Nível 1 (recuperação noturna).</li>
+      <li>Nível 2: UTCI ≥ 32 °C por 4 horas ou ≥ 28 °C por 7 horas. Com madrugada (0h–6h) quente, ≥ 22 °C, vale já no 1º dia; com madrugada amena, de 20 a 22 °C, a partir do 2º dia seguido de calor; com madrugada abaixo de 20 °C, o dia fica em Nível 1 (recuperação noturna).</li>
       <li>Rampa: um dia em Nível 1 com UTCI máxima ≥ 30 °C sobe para Nível 2 se o dia seguinte for Nível 3 ou mais.</li>
       <li>Acúmulo: Nível 2 por mais de 3 dias seguidos vira Nível 3; Nível 3 por mais de 2 dias vira Nível 4; Nível 4 por 2 dias vira Nível 5.</li>
       <li>Rescaldo: depois de um dia em Nível 3 ou mais, um dia que cairia para Nível 1 fica em Nível 2.</li>
+      <li>As regras entre dias consideram também os 3 dias anteriores. O horário crítico é o do nível final do dia.</li>
       <li>Chuva: estabilidade pela chuva no centro e na vizinhança de 55 km e pela probabilidade de chuva diária ≥ 10, 25 e 50 mm em algum ponto da vizinhança (NMEP), com os ensembles GFS (31 membros) e ECMWF (51 membros).</li>
     </ul>
-    <p>Métodos: UTCI (Fiala et al., 2012; Bröde et al., 2012), temperatura radiante média no esquema ERA5, PET (pythermalcomfort), IBUTG (ISO 7243:2017) e taxa metabólica admissível (NR-15, Anexo 3), índice de calor (NOAA) e orientações da OMM (WMO-No. 1142).</p>
+    <p>Métodos: UTCI (Fiala et al., 2012; Bröde et al., 2012), temperatura radiante média no esquema ERA5-HEAT (Di Napoli et al., 2020), com radiação direta normal ao sol, PET (pythermalcomfort), IBUTG (ISO 7243:2017) e taxa metabólica admissível (NR-15, Anexo 3), índice de calor (NOAA) e orientações da OMM (WMO-No. 1142).</p>
   </details>
 </main>
 

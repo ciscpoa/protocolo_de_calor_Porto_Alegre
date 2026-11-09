@@ -1,7 +1,7 @@
 """Gera os dados do painel público do Protocolo de Calor de Porto Alegre.
 
 Baixa as previsões (ECMWF IFS e NOAA GFS, via Open-Meteo), calcula os índices térmicos, aplica o
-protocolo (gatilhos diários + rampa + acúmulo + rescaldo) e grava:
+protocolo (gatilhos diários + persistência + rampa + acúmulo + rescaldo) e grava:
   docs/dados/previsao.js    lido pela página (window.PREVISAO)
   docs/dados/previsao.json  os mesmos dados, para reutilização
 Uso: python gerar_painel.py
@@ -87,17 +87,22 @@ def main() -> None:
         mme[f"{nome}_MME"] = (ec[col] + gf[col]) / 2.0
     for df in (ec, gf, mme):
         df["date"] = df["time"].dt.date
-    dias = list(dict.fromkeys(ec["date"]))
+    agora = datetime.now(ZoneInfo(previsao.FUSO))
+    todos_dias = list(dict.fromkeys(ec["date"]))          # inclui os dias anteriores (contexto das regras)
+    dias = [d for d in todos_dias if d >= agora.date()]  # o painel mostra de hoje em diante
 
     try:
         cubos = previsao.baixar_ensemble(om, pontos)
-        nmep = {k: previsao.nmep_diario(cubos[k], (ec if k == "ecmwf" else gf)["date"].to_numpy(), dias) for k in cubos}
+        nmep = {k: previsao.nmep_diario(c["cubo"], c["datas"], dias) for k, c in cubos.items()}
         ensemble_ok = True
     except Exception as erro:  # o painel sai sem as probabilidades
         print(f"Aviso: ensemble indisponível ({erro})", file=sys.stderr)
         nmep, ensemble_ok = {"ecmwf": {}, "gfs": {}}, False
 
-    diagnosticos = protocolo.aplicar_regras_multidiarias([protocolo.avaliar_dia(mme[mme["date"] == d]) for d in dias])
+    diag_todos = protocolo.aplicar_regras_multidiarias([protocolo.avaliar_dia(mme[mme["date"] == d]) for d in todos_dias])
+    anteriores = [{"data": d.isoformat(), "nivel": x["nivel"], "gatilho": x["gatilho"]}
+                  for d, x in zip(todos_dias, diag_todos) if d < agora.date()]
+    diagnosticos = [x for d, x in zip(todos_dias, diag_todos) if d >= agora.date()]
 
     saida_dias = []
     for d, diag in zip(dias, diagnosticos):
@@ -127,21 +132,21 @@ def main() -> None:
             "modelos": {"ecmwf": r_ec, "gfs": r_gf},
         })
 
-    agora = datetime.now(ZoneInfo(previsao.FUSO))
+    f = (ec["date"] >= agora.date()).to_numpy()
     horario = {
-        "tempo": [t.strftime("%Y-%m-%dT%H:%M") for t in ec["time"]],
-        "temp": mme["T2M_MME"].to_numpy(), "sensacao": mme["UTCI_MME"].to_numpy(),
-        "sensacao_ecmwf": ec["utci"].to_numpy(), "sensacao_gfs": gf["utci"].to_numpy(),
-        "temp_ecmwf": ec["t2m"].to_numpy(), "temp_gfs": gf["t2m"].to_numpy(),
-        "chuva": ((ec["precip_center"] + gf["precip_center"]) / 2.0).to_numpy(),
-        "umidade": ((ec["rh2m"] + gf["rh2m"]) / 2.0).to_numpy(),
-        "vento": ((ec["wind_kmh"] + gf["wind_kmh"]) / 2.0).to_numpy(),
-        "ibutg": mme["WBGT_MME"].to_numpy(),
+        "tempo": [t.strftime("%Y-%m-%dT%H:%M") for t in ec["time"][f]],
+        "temp": mme["T2M_MME"].to_numpy()[f], "sensacao": mme["UTCI_MME"].to_numpy()[f],
+        "sensacao_ecmwf": ec["utci"].to_numpy()[f], "sensacao_gfs": gf["utci"].to_numpy()[f],
+        "temp_ecmwf": ec["t2m"].to_numpy()[f], "temp_gfs": gf["t2m"].to_numpy()[f],
+        "chuva": ((ec["precip_center"] + gf["precip_center"]) / 2.0).to_numpy()[f],
+        "umidade": ((ec["rh2m"] + gf["rh2m"]) / 2.0).to_numpy()[f],
+        "vento": ((ec["wind_kmh"] + gf["wind_kmh"]) / 2.0).to_numpy()[f],
+        "ibutg": mme["WBGT_MME"].to_numpy()[f],
     }
     dados = limpar({
         "gerado_em": agora.isoformat(timespec="minutes"), "local": "Porto Alegre (RS)",
         "centro": [previsao.LAT_CENTRAL, previsao.LON_CENTRAL], "raio_km": previsao.RAIO_KM, "pontos": len(pontos),
-        "ensemble": ensemble_ok, "niveis": protocolo.NIVEIS, "dias": saida_dias,
+        "ensemble": ensemble_ok, "niveis": protocolo.NIVEIS, "dias": saida_dias, "dias_anteriores": anteriores,
         "horario": {k: list(v) for k, v in horario.items()},
     })
     SAIDA.mkdir(parents=True, exist_ok=True)
@@ -150,6 +155,8 @@ def main() -> None:
     (SAIDA / "previsao.js").write_text(f"window.PREVISAO={texto};\n", encoding="utf-8")
 
     print(f"\nPrevisão gerada em {agora:%d/%m/%Y %H:%M} (ensemble: {'sim' if ensemble_ok else 'não'})")
+    for x in anteriores:
+        print(f"  (anterior) {x['data']}  N{x['nivel']}  | {x['gatilho']}")
     for x in saida_dias:
         print(f"  {x['dia_semana']:<8} {x['data']}  N{x['nivel']} {x['nome']:<11} Tmáx {x['temp']['max']:4.1f}  "
               f"UTCI máx {x['sensacao']['max']:4.1f}  chuva {x['chuva_mm']:4.1f} mm  | {x['gatilho']}")

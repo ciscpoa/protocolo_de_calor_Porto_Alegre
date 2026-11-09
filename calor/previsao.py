@@ -1,7 +1,9 @@
 """Download das previsões (Open-Meteo) e processamento por modelo, como no código original.
 
-- Determinístico: ECMWF IFS 0,25° e NOAA GFS, horário, 5 dias, em 25 pontos num raio de 55 km de
-  Porto Alegre. Os índices térmicos usam o ponto central; a chuva usa também a média e o máximo da grade.
+- Determinístico: ECMWF IFS 0,25° e NOAA GFS, horário, 5 dias à frente e 3 dias para trás (contexto das
+  regras de persistência, acúmulo e rescaldo), em 25 pontos num raio de 55 km de Porto Alegre. Os índices
+  térmicos usam o ponto central; a chuva usa também a média e o máximo da grade. A radiação é a do
+  instante da hora, coerente com a posição do sol calculada para o mesmo horário.
 - Ensemble (GFS 0,25° com 31 membros e ECMWF IFS 0,25° com 51): probabilidade de chuva acumulada no
   dia acima de 10, 25 e 50 mm em algum ponto da vizinhança (NMEP).
 """
@@ -20,8 +22,10 @@ LAT_CENTRAL, LON_CENTRAL, RAIO_KM = -30.08, -51.21, 55.0
 LIMIARES_NMEP = [10.0, 25.0, 50.0]
 FUSO = "America/Sao_Paulo"
 DIAS = 5
-VARIAVEIS = ["temperature_2m", "relative_humidity_2m", "wind_speed_10m", "direct_radiation", "diffuse_radiation",
-             "precipitation", "weather_code", "wind_direction_10m", "wind_gusts_10m", "surface_temperature"]
+DIAS_ANTERIORES = 3  # o acúmulo de N2 olha até 3 dias para trás
+VARIAVEIS = ["temperature_2m", "relative_humidity_2m", "wind_speed_10m", "direct_radiation_instant",
+             "diffuse_radiation_instant", "direct_normal_irradiance_instant", "precipitation", "weather_code",
+             "wind_direction_10m", "wind_gusts_10m", "surface_temperature"]
 MODELOS_DET = {"gfs_seamless": "gfs", "ecmwf_ifs025": "ecmwf"}
 MODELOS_ENS = {"gfs025": "gfs", "ecmwf_ifs025": "ecmwf"}
 _NOME_MODELO = {v: k for k, v in vars(Model).items() if not k.startswith("_") and isinstance(v, int)}
@@ -64,19 +68,24 @@ def _separar_por_modelo(respostas, mapa: dict, n_pontos: int) -> dict:
 def baixar_deterministico(om, pontos) -> dict:
     params = {"latitude": [p[0] for p in pontos], "longitude": [p[1] for p in pontos], "hourly": VARIAVEIS,
               "models": list(MODELOS_DET), "wind_speed_unit": "kmh", "precipitation_unit": "mm",
-              "timezone": FUSO, "forecast_days": DIAS}
+              "timezone": FUSO, "forecast_days": DIAS, "past_days": DIAS_ANTERIORES}
     return _separar_por_modelo(om.weather_api("https://api.open-meteo.com/v1/forecast", params=params), MODELOS_DET, len(pontos))
+
+
+def _tempos(h) -> pd.DatetimeIndex:
+    return pd.date_range(start=pd.to_datetime(h.Time(), unit="s", utc=True), end=pd.to_datetime(h.TimeEnd(), unit="s", utc=True),
+                         freq=pd.Timedelta(seconds=h.Interval()), inclusive="left").tz_convert(FUSO)
 
 
 def processar_modelo(respostas, idx_centro: int) -> pd.DataFrame:
     h = respostas[idx_centro].Hourly()
-    tempos = pd.date_range(start=pd.to_datetime(h.Time(), unit="s", utc=True), end=pd.to_datetime(h.TimeEnd(), unit="s", utc=True),
-                           freq=pd.Timedelta(seconds=h.Interval()), inclusive="left").tz_convert(FUSO)
+    tempos = _tempos(h)
     var = {nome: h.Variables(i).ValuesAsNumpy().astype(np.float64) for i, nome in enumerate(VARIAVEIS)}
     t2m, ur = var["temperature_2m"], var["relative_humidity_2m"]
     vento_ms = var["wind_speed_10m"] / 3.6
     zen = indices.zenite_solar(tempos, LAT_CENTRAL, LON_CENTRAL)
-    tmrt = indices.tmrt_era5(t2m, var["direct_radiation"], var["diffuse_radiation"], zen, ur=ur)
+    dir_h, dif, dni = var["direct_radiation_instant"], var["diffuse_radiation_instant"], var["direct_normal_irradiance_instant"]
+    tmrt = indices.tmrt_era5(t2m, dni, dif, dir_h, zen, ur=ur)
     chuva_grade = np.array([r.Hourly().Variables(VARIAVEIS.index("precipitation")).ValuesAsNumpy() for r in respostas], dtype=np.float64)
     return pd.DataFrame({
         "time": tempos, "t2m": t2m, "tskin": var["surface_temperature"], "rh2m": ur,
@@ -85,13 +94,13 @@ def processar_modelo(respostas, idx_centro: int) -> pd.DataFrame:
         "weather_code": var["weather_code"], "tmrt": tmrt,
         "utci": indices.utci(t2m, tmrt, vento_ms, ur),
         "pet": indices.pet(t2m, tmrt, vento_ms, ur),
-        "wbgt": indices.ibutg_iso7243(t2m, ur, vento_ms, var["direct_radiation"] + var["diffuse_radiation"], tmrt),
+        "wbgt": indices.ibutg_iso7243(t2m, ur, vento_ms, dir_h + dif, tmrt),
         "heat_index": indices.indice_calor_noaa(t2m, ur),
     })
 
 
 def baixar_ensemble(om, pontos) -> dict:
-    """Cubo (membros × pontos × horas) de chuva por modelo."""
+    """Por modelo: cubo (membros × pontos × horas) de chuva e as datas de cada hora."""
     params = {"latitude": [p[0] for p in pontos], "longitude": [p[1] for p in pontos], "hourly": "precipitation",
               "models": list(MODELOS_ENS), "timezone": FUSO, "forecast_days": DIAS}
     grupos = _separar_por_modelo(om.weather_api("https://ensemble-api.open-meteo.com/v1/ensemble", params=params),
@@ -99,7 +108,8 @@ def baixar_ensemble(om, pontos) -> dict:
     cubos = {}
     for k, resps in grupos.items():
         por_ponto = [[r.Hourly().Variables(v).ValuesAsNumpy() for v in range(r.Hourly().VariablesLength())] for r in resps]
-        cubos[k] = np.transpose(np.array(por_ponto, dtype=np.float64), (1, 0, 2))
+        cubos[k] = {"cubo": np.transpose(np.array(por_ponto, dtype=np.float64), (1, 0, 2)),
+                    "datas": np.array([t.date() for t in _tempos(resps[0].Hourly())])}
     return cubos
 
 

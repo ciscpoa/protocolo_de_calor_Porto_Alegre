@@ -1,10 +1,13 @@
 """Índices térmicos do protocolo: geometria solar, Tmrt, UTCI, IBUTG (WBGT), índice de calor e PET.
 
-Fórmulas do código original do protocolo (Temporada 2026/2027), com duas observações:
+Fórmulas do código original do protocolo (Temporada 2026/2027), com estes ajustes:
 - UTCI: polinômio de Bröde et al. (2012) pela implementação de referência da pythermalcomfort,
   que usa os mesmos coeficientes e a mesma pressão de vapor de Hardy (ITS-90) do código original.
 - Os operadores de potência perdidos na cópia do código (haversine, índice de calor, IBUTG) foram
   restaurados conforme as fórmulas publicadas (NOAA/Rothfusz; ISO 7243).
+- Tmrt no esquema ERA5-HEAT completo (Di Napoli et al., 2020), o método declarado no código
+  (METODO_TMRT = 'ECMWF_ERA5'): fator de área projetada de Jendritzky com a elevação em graus e
+  radiação direta normal ao sol (I*). O código original usava γ²/4,92 e a direta horizontal.
 """
 from __future__ import annotations
 
@@ -13,10 +16,6 @@ import pandas as pd
 from pythermalcomfort.models import pet_steady
 from pythermalcomfort.models import utci as utci_referencia
 
-# Fator de área projetada (fp) da Tmrt: divisor de γ² com γ (elevação solar) em radianos.
-# O código original usa 4,92. O ERA5-HEAT (Di Napoli et al., 2020) usa γ²/50000 com γ em graus,
-# o que equivale a 15,23 com γ em radianos. Mantido o valor do código; ver README.
-FP_DIVISOR = 4.92
 
 
 def zenite_solar(tempos: pd.DatetimeIndex, lat: float, lon: float) -> np.ndarray:
@@ -48,15 +47,25 @@ def es_hardy_its90(ta) -> np.ndarray:
     return np.exp(es) * 0.01
 
 
-def tmrt_era5(ta, rad_direta, rad_difusa, zenite, ur=50.0, albedo=0.20) -> np.ndarray:
-    """Temperatura radiante média (°C), esquema ECMWF ERA5 do código original."""
+def fator_area_projetada(zenite) -> np.ndarray:
+    """fp de Jendritzky para pessoa em pé: 0,308·cos[h·(0,998 − h²/50000)], h = elevação solar em graus."""
+    h = np.maximum(0.0, 90.0 - np.asarray(zenite, dtype=np.float64))
+    return np.where(h > 0, 0.308 * np.cos(np.radians(h * (0.998 - h ** 2 / 50000.0))), 0.08)
+
+
+def tmrt_era5(ta, rad_direta_normal, rad_difusa, rad_direta_horizontal, zenite, ur=50.0, albedo=0.20) -> np.ndarray:
+    """Temperatura radiante média (°C), esquema ERA5-HEAT (Di Napoli et al., 2020).
+
+    σ·Tmrt⁴ = 0,5·(L↓ + L↑) + (α/ε)·(fp·I* + 0,5·D + 0,5·albedo·G), com I* a radiação direta normal
+    ao sol, D a difusa e G a global horizontal. As ondas longas seguem o código original
+    (emissividade do céu a partir da pressão de vapor; superfície à temperatura do ar).
+    """
     sigma, a_p, eps_p = 5.670374e-8, 0.70, 0.97
-    zen = np.radians(np.asarray(zenite, dtype=np.float64))
-    elevacao = np.maximum(0.0, np.pi / 2.0 - zen)
-    fp = np.where(elevacao > 0, 0.308 * np.cos(elevacao * (0.998 - elevacao ** 2 / FP_DIVISOR)), 0.08)
-    i_dir = np.asarray(rad_direta, dtype=np.float64)
+    fp = fator_area_projetada(zenite)
+    i_norm = np.asarray(rad_direta_normal, dtype=np.float64)
     i_dif = np.asarray(rad_difusa, dtype=np.float64)
-    r_sw = a_p * (fp * i_dir + 0.5 * i_dif + 0.5 * albedo * (i_dir + i_dif))
+    i_glob = np.asarray(rad_direta_horizontal, dtype=np.float64) + i_dif
+    r_sw = a_p * (fp * i_norm + 0.5 * i_dif + 0.5 * albedo * i_glob)
     tk = np.asarray(ta, dtype=np.float64) + 273.15
     e_vap = es_hardy_its90(ta) * (np.asarray(ur, dtype=np.float64) / 100.0)
     eps_ceu = np.clip(0.70 + 5.95e-5 * e_vap * np.exp(1500.0 / tk), 0.70, 0.99)

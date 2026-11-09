@@ -24,12 +24,13 @@ Alegre (−30,08; −51,21):
 | 5 Emergência | UTCI ≥ 48 °C por mais de 1 h |
 | 4 Perigo | UTCI ≥ 38 °C por mais de 2 h |
 | 3 Alerta | UTCI ≥ 34 °C por mais de 2 h |
-| 2 Atenção | UTCI ≥ 32 °C por 4 h ou ≥ 28 °C por 7 h, com mínima da madrugada (0h–6h) ≥ 20 °C |
+| 2 Atenção | UTCI ≥ 32 °C por 4 h ou ≥ 28 °C por 7 h: no 1º dia se a madrugada (0h–6h) for ≥ 22 °C; com madrugada de 20–22 °C, a partir do 2º dia seguido |
 | 1 Normalidade | abaixo disso, ou calor com madrugada < 20 °C |
 
-Regras entre dias: **rampa** (N1 com UTCI máx. ≥ 30 °C vira N2 se o dia seguinte for N3+), **acúmulo**
-(N2 > 3 dias → N3; N3 > 2 dias → N4; N4 ≥ 2 dias → N5) e **rescaldo** (depois de N3+, um dia que cairia
-para N1 fica em N2). Os testes em `tests/` cobrem cada regra.
+Regras entre dias: **persistência** (N2 com madrugada amena só a partir do 2º dia), **rampa** (N1 com UTCI
+máx. ≥ 30 °C vira N2 se o dia seguinte for N3+), **acúmulo** (N2 > 3 dias → N3; N3 > 2 dias → N4; N4 ≥ 2 dias
+→ N5) e **rescaldo** (depois de N3+, um dia que cairia para N1 fica em N2). Essas regras olham também os
+3 dias anteriores à previsão. O horário crítico é o do nível final do dia. Os testes em `tests/` cobrem cada regra.
 
 ## Rodar localmente
 
@@ -58,12 +59,13 @@ Depois, abra `docs/index.html` no navegador (funciona sem servidor).
   os operadores `*` e `**` do polinômio se perderam.
 - **Operadores restaurados:** haversine (`** 2`), índice de calor da NOAA (`tf ** 2`, `rh ** 2`) e
   coeficiente de convecção do globo no IBUTG (`6,3 · v^0,6 / D^0,4`).
-- **A conferir — Tmrt:** o fator de área projetada usa `γ² / 4,92` (γ em radianos), como no código. No
-  ERA5-HEAT (Di Napoli et al., 2020) o termo é `h² / 50000` com h em graus, o que equivale a `γ² / 15,23`.
-  Com 15,23, a Tmrt e a UTCI ao meio-dia ficam cerca de 1 °C menores e alguns dias baixam um nível. O
-  valor é a constante `FP_DIVISOR` em `calor/indices.py`.
-- **A conferir — Nível 2 com madrugada entre 20 e 22 °C:** o comentário do código original diz que esse
-  caso exigiria 2 dias seguidos, mas o código ativa o N2 já no primeiro dia. O painel segue o código.
+- **Tmrt no esquema ERA5-HEAT completo** (Di Napoli et al., 2020), o método declarado no código
+  (`METODO_TMRT = 'ECMWF_ERA5'`): fator de área projetada `0,308·cos[h·(0,998 − h²/50000)]` com h em graus
+  (o código usava `γ²/4,92` com γ em radianos) e radiação direta normal ao sol, no instante da hora (o
+  código usava a direta horizontal, média da hora anterior). Na semana de 09/11/2026, a UTCI máxima diária
+  ficou ~1 °C menor que no código original, e os níveis passaram de 1-2-3-3-2 para 1-1-2-3-2.
+- **Persistência do Nível 2:** o comentário do código original pedia 2 dias seguidos quando a madrugada fica
+  entre 20 e 22 °C, mas o código não aplicava a regra. Agora aplica, com os 3 dias anteriores como contexto.
 
 ## Dados
 
