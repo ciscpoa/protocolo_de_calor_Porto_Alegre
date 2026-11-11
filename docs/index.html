@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Calor de Porto Alegre</title>
+<meta name="description" content="Alertas do Protocolo de Calor, sensação térmica atual, índice UV e previsão para Porto Alegre.">
+<meta name="theme-color" content="#0b3b4c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Painel de Calor de Porto Alegre — previsão e alertas">
+<meta property="og:description" content="Nível de alerta, sensação térmica atual, índice UV e cuidados para os próximos dias.">
+<meta property="og:url" content="https://ciscpoa.github.io/protocolo_de_calor_Porto_Alegre/">
+<meta property="og:image" content="https://ciscpoa.github.io/protocolo_de_calor_Porto_Alegre/img/compartilhar.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="img/favicon-64.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<style>
+@font-face { font-family: "Public Sans"; src: url("fonts/public-sans-variable.woff2") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibm-plex-sans-variable.woff2") format("woff2"); font-style: normal; font-weight: 100 700; font-display: swap; }
+:root {
+  color-scheme: light;
+  --plano: #eef4f5; --plano: oklch(0.958 0.008 210);
+  --superficie: #fcffff; --superficie: oklch(0.995 0.003 180);
+  --tinta: #17323c; --tinta: oklch(0.322 0.035 220);
+  --tinta2: #49646d; --tinta2: oklch(0.49 0.028 215);
+  --muda: #5a727a; --muda: oklch(0.53 0.025 210);
+  --titulos: #0b3b4c; --titulos: oklch(0.36 0.05 222);
+  --marca: #006d77; --marca: oklch(0.48 0.075 200);
+  --marca-escura: #0b3b4c; --marca-escura: oklch(0.36 0.05 222);
+  --acento: #00666d; --acento: oklch(0.45 0.065 201);
+  --laranja: #e76f51; --laranja: oklch(0.66 0.14 35);
+  --grade: #d8e4e6; --grade: oklch(0.90 0.012 205); --eixo: #bdd0d3;
+  --borda: rgba(11, 59, 76, 0.12); --lavagem: rgba(0, 109, 119, 0.07); --selecao: rgba(0, 109, 119, 0.11);
+  --modelo-consenso: #17323c; --modelo-ecmwf: #1479c9; --modelo-gfs: #e76f51;
+  --s1: #1479c9; --s2: #e76f51; --faixa-op: 0.13; --nuvem: #7895a2; --nuvem2: #c4d5da;
+  --sol: #f4a62a; --gota: #1479c9; --raio: #e11d48;
+  --sombra: 0 12px 30px rgba(11, 59, 76, 0.10); --sombra-leve: 0 5px 16px rgba(11, 59, 76, 0.07);
+  --uv-fundo: linear-gradient(145deg, #fff5e8 0%, #fcffff 78%);
+  --f-corpo: "Public Sans", sans-serif; --f-titulo: "IBM Plex Sans", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --plano: #0c2028; --plano: oklch(0.26 0.025 225);
+    --superficie: #14323b; --superficie: oklch(0.32 0.035 220);
+    --tinta: #eef7f6; --tinta: oklch(0.96 0.01 180);
+    --tinta2: #c3d9d9; --tinta2: oklch(0.86 0.02 195);
+    --muda: #a8c2c4; --muda: oklch(0.77 0.02 200);
+    --titulos: #eef7f6; --titulos: oklch(0.96 0.01 180);
+    --marca: #75d1d0; --marca: oklch(0.80 0.08 190);
+    --marca-escura: #0b3b4c; --marca-escura: oklch(0.36 0.05 222);
+    --acento: #75d1d0; --acento: oklch(0.80 0.08 190);
+    --grade: #31515a; --grade: oklch(0.44 0.03 215); --eixo: #46666f;
+    --borda: rgba(238, 247, 246, 0.13); --lavagem: rgba(117, 209, 208, 0.09); --selecao: rgba(117, 209, 208, 0.15);
+    --modelo-consenso: #eef7f6; --modelo-ecmwf: #79bdff; --modelo-gfs: #ff9b7e;
+    --s1: #79bdff; --s2: #ff9b7e; --faixa-op: 0.18; --nuvem: #647f8b; --nuvem2: #90aab3;
+    --sombra: 0 12px 30px rgba(0, 0, 0, 0.30); --sombra-leve: 0 5px 16px rgba(0, 0, 0, 0.24);
+    --uv-fundo: linear-gradient(145deg, #3a3025 0%, #14323b 78%);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plano: #0c2028; --plano: oklch(0.26 0.025 225);
+  --superficie: #14323b; --superficie: oklch(0.32 0.035 220);
+  --tinta: #eef7f6; --tinta: oklch(0.96 0.01 180);
+  --tinta2: #c3d9d9; --tinta2: oklch(0.86 0.02 195);
+  --muda: #a8c2c4; --muda: oklch(0.77 0.02 200);
+  --titulos: #eef7f6; --titulos: oklch(0.96 0.01 180);
+  --marca: #75d1d0; --marca: oklch(0.80 0.08 190);
+  --marca-escura: #0b3b4c; --marca-escura: oklch(0.36 0.05 222);
+  --acento: #75d1d0; --acento: oklch(0.80 0.08 190);
+  --grade: #31515a; --grade: oklch(0.44 0.03 215); --eixo: #46666f;
+  --borda: rgba(238, 247, 246, 0.13); --lavagem: rgba(117, 209, 208, 0.09); --selecao: rgba(117, 209, 208, 0.15);
+  --modelo-consenso: #eef7f6; --modelo-ecmwf: #79bdff; --modelo-gfs: #ff9b7e;
+  --s1: #79bdff; --s2: #ff9b7e; --faixa-op: 0.18; --nuvem: #647f8b; --nuvem2: #90aab3;
+  --sombra: 0 12px 30px rgba(0, 0, 0, 0.30); --sombra-leve: 0 5px 16px rgba(0, 0, 0, 0.24);
+  --uv-fundo: linear-gradient(145deg, #3a3025 0%, #14323b 78%);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; background: var(--plano); color: var(--tinta);
+  font: 16px/1.6 var(--f-corpo); font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+a { color: var(--acento); text-underline-offset: 3px; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font-family: inherit; }
+img { max-width: 100%; }
+h1, h2, h3 { font-family: var(--f-titulo); color: var(--titulos); }
+p { max-width: 75ch; }
+.largura { width: min(100% - 32px, 1480px); margin-inline: auto; }
+.pular { position: fixed; z-index: 20; top: 8px; left: 8px; transform: translateY(-160%); background: var(--superficie); color: var(--tinta); padding: 10px 16px; border: 2px solid var(--acento); }
+.pular:focus { transform: translateY(0); }
+
+.faixa-inst { background: var(--superficie); border-bottom: 1px solid var(--grade); }
+.faixa-inst .largura { display: flex; align-items: center; padding-block: 8px; }
+.faixa-inst img { display: block; height: clamp(36px, 4.2vw, 54px); width: auto; }
+.cabecalho { position: relative; overflow: hidden; color: #f4ffff;
+  background: radial-gradient(circle at 88% -30%, rgba(117, 209, 208, 0.30), transparent 42%),
+              radial-gradient(circle at 64% 130%, rgba(231, 111, 81, 0.16), transparent 38%),
+              linear-gradient(125deg, #082f3d 0%, #0b3b4c 48%, #006d77 120%); }
+.cabecalho::after { content: ""; position: absolute; inset: auto 0 0; height: 3px; background: var(--laranja); }
+.cabecalho .largura { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-block: clamp(22px, 2.6vw, 36px); }
+.cabecalho .marca { flex: none; width: clamp(52px, 6vw, 80px); height: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.15)); }
+.cabecalho .titulos { flex: 1 1 260px; min-width: 0; }
+.cabecalho .sobre { margin: 0 0 4px; font-size: 12px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: #bce7e5; }
+.cabecalho h1 { margin: 0 0 6px; color: #f4ffff; font-size: clamp(30px, 2vw + 18px, 46px); line-height: 1.12; font-weight: 680; letter-spacing: -0.025em; }
+.cabecalho .sub { margin: 0; color: #d8eeee; font-size: clamp(15px, 0.3vw + 14px, 18px); }
+.cabecalho .acoes { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 16px; }
+.cabecalho .atualizado { font-size: 13px; color: #e5f4f3; padding: 6px 0; }
+.btn { min-height: 44px; border: 1px solid rgba(244, 255, 255, 0.48); background: rgba(244, 255, 255, 0.10); color: #f4ffff; border-radius: 999px;
+  padding: 9px 16px; font: 600 14px/1.2 var(--f-corpo); cursor: pointer; transition: background-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out; }
+.btn:hover { background: #f4ffff; color: #0b3b4c; }
+.btn:active { transform: translateY(1px); }
+.atalhos { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--superficie) 94%, transparent); border-bottom: 1px solid var(--borda); box-shadow: 0 4px 16px rgba(11,59,76,.05); backdrop-filter: blur(14px); }
+.atalhos .largura { display: flex; flex-wrap: wrap; gap: 4px 26px; }
+.atalhos a { min-height: 48px; display: inline-flex; align-items: center; color: var(--tinta2); text-decoration: none; font-size: 14px; font-weight: 650; border-bottom: 3px solid transparent; }
+.atalhos a:hover { color: var(--marca); border-bottom-color: var(--laranja); }
+
+main { flex: 1; padding: clamp(24px, 2.6vw, 38px) 0 52px; }
+.secao, #hoje { scroll-margin-top: 76px; }
+.secao { margin-top: clamp(34px, 4vw, 54px); }
+.cab-secao { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 24px; margin-bottom: 16px; border-bottom: 1px solid var(--grade); }
+.cab-secao h2 { flex: 1 1 300px; font-size: clamp(23px, 0.7vw + 19px, 29px); line-height: 1.25; margin: 0 0 10px; font-weight: 680; letter-spacing: -0.018em; }
+.cab-secao p { flex: 2 1 420px; margin: 0 0 10px; color: var(--tinta2); font-size: 14px; }
+.aviso-dados { background: #fef9c3; color: #713f12; border: 1px solid #ca8a04; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 14px; }
+.cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 20px; padding: clamp(18px, 1.8vw, 26px); min-width: 0; box-shadow: var(--sombra-leve); }
+
+/* Indicadores principais em composição assimétrica de observatório. */
+.hoje { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.hoje > article { min-width: 0; padding: clamp(20px, 2vw, 28px); border: 1px solid var(--borda); border-radius: 22px; background: var(--superficie); box-shadow: var(--sombra-leve); }
+.hoje h2 { margin: 0; font-size: 17px; line-height: 1.35; font-weight: 680; }
+.hoje .rotulo small { display: block; margin-top: 4px; color: var(--tinta2); font: 400 13px/1.45 var(--f-corpo); }
+.alerta { order: 1; display: flex; flex-direction: column; gap: 12px; }
+.alerta .nivel { display: flex; justify-content: center; width: 100%; margin: -4px 0 2px; }
+.alerta .nivel .num { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 5px 18px; border: 0; border-radius: 999px;
+  font-size: 13px; font-weight: 780; letter-spacing: 0.075em; text-transform: uppercase; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+.alerta .protocolo { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.075em; text-transform: uppercase; }
+.alerta .nome { margin: 0; color: inherit; font-size: clamp(42px, 3.5vw + 20px, 64px); font-weight: 720; line-height: 1.02; letter-spacing: -0.04em; text-align: left; }
+.alerta .motivo { margin: 0; font-size: clamp(16px, 0.3vw + 15px, 19px); line-height: 1.5; }
+.alerta .janela { align-self: flex-start; font-weight: 700; font-size: 14px; border-block: 1px solid currentColor; padding: 7px 0; }
+.alerta h3 { margin: 6px 0 0; color: inherit; font-size: 16px; }
+.alerta ul { margin: 0; padding-left: 20px; }
+.alerta li { margin: 4px 0; }
+.alerta .rodape-alerta { margin-top: auto; padding-top: 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.alerta .compartilhar { min-height: 44px; border: 1px solid currentColor; background: rgba(255,255,255,.22); color: inherit; border-radius: 999px;
+  padding: 9px 16px; font: 650 14px/1.2 var(--f-corpo); cursor: pointer; transition: background-color 150ms ease-out, transform 150ms ease-out; }
+.alerta .compartilhar:hover { background: rgba(255, 255, 255, 0.65); transform: translateY(-1px); }
+.alerta .quando { margin-left: auto; font-size: 13px; font-weight: 650; text-align: right; }
+
+.sensacao { order: 2; }
+.sensacao .valor { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin: 14px 0 5px; }
+.sensacao .valor strong { color: var(--marca-escura); font-size: clamp(66px, 5vw + 30px, 92px); font-weight: 650; line-height: 0.92; letter-spacing: -0.06em; }
+.pilula-faixa { display: inline-flex; align-items: center; min-height: 30px; font-size: 14px; font-weight: 750; border-radius: 999px; padding: 4px 12px; }
+.sensacao .hora { font-size: 14px; color: var(--tinta2); }
+.sensacao .maximo { margin: 6px 0 0; color: var(--tinta2); font-size: 14px; font-weight: 600; }
+.regua { margin: 18px 0 8px; }
+.regua .barra { position: relative; display: flex; gap: 2px; height: 12px; }
+.regua .barra span { height: 100%; }
+.regua .barra span:first-child { border-radius: 6px 0 0 6px; }
+.regua .barra span:last-child { border-radius: 0 6px 6px 0; }
+.regua .marcador { position: absolute; top: -8px; width: 0; height: 0; transform: translateX(-6px);
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--tinta); }
+.regua .marcador::after { content: ""; position: absolute; left: -1px; top: -8px; width: 2px; height: 28px; background: var(--tinta); }
+.regua .ticks { position: relative; height: 20px; font-size: 12px; color: var(--muda); }
+.regua .ticks span { position: absolute; transform: translateX(-50%); top: 4px; }
+.rotulo-grupo { margin: 16px 0 6px; color: var(--tinta2); font-size: 12px; font-weight: 650; letter-spacing: 0.035em; text-transform: uppercase; }
+.horas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--grade); }
+.horas div { min-width: 0; padding: 9px 8px; }
+.horas div + div { border-left: 1px solid var(--grade); }
+.horas div:first-child { padding-left: 0; }
+.horas b { display: block; font-size: 22px; line-height: 1.2; }
+.horas span { font-size: 12px; color: var(--tinta2); line-height: 1.35; display: flex; align-items: center; gap: 5px; }
+.ponto-faixa { width: 8px; height: 8px; flex: none; display: inline-block; border-radius: 2px; }
+.sensacao .explica { font-size: 13px; color: var(--tinta2); margin: 12px 0 0; }
+
+.tempo-dia { order: 4; }
+.tempo-dia .linha1 { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.tempo-dia .cond { font-family: var(--f-titulo); font-size: 20px; font-weight: 650; line-height: 1.25; }
+.tempo-dia .estab { font-size: 13px; color: var(--tinta2); }
+.numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+.numeros > div { padding: 10px 0; border-top: 1px solid var(--grade); min-width: 0; }
+.numeros span { display: block; font-size: 12px; line-height: 1.35; color: var(--tinta2); }
+.numeros strong { display: inline-block; margin-top: 2px; font-size: 20px; font-weight: 650; line-height: 1.2; }
+.numeros small { display: block; font-size: 12px; line-height: 1.35; color: var(--tinta2); }
+
+.uv { order: 3; background: var(--uv-fundo); }
+.uv .valor-uv { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 14px 0 8px; }
+.uv .valor-uv strong { font-size: clamp(64px, 5vw + 28px, 88px); font-weight: 650; line-height: 0.95; letter-spacing: -0.055em; }
+.uv .valor-uv .hora { color: var(--tinta2); font-size: 13px; }
+.escala-uv { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; margin: 12px 0; }
+.escala-uv span { min-width: 0; padding-top: 5px; border-top: 6px solid var(--cor-uv); color: var(--tinta2); font-size: 11px; line-height: 1.25; text-align: center; }
+.escala-uv span[aria-current="true"] { color: var(--tinta); font-weight: 750; outline: 1px solid var(--tinta); outline-offset: 2px; }
+.uv .agora-uv { margin: 12px 0 0; padding-block: 9px; border-block: 1px solid var(--grade); font-size: 14px; font-weight: 650; }
+.uv .cuidado-uv { margin: 12px 0 0; font-size: 14px; line-height: 1.5; }
+.uv .explica { margin: 10px 0 0; color: var(--tinta2); font-size: 12px; line-height: 1.5; }
+.uv .indisponivel { margin: 16px 0 0; color: var(--tinta2); }
+@media (min-width: 700px) {
+  .hoje { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hoje .alerta { grid-column: 1 / -1; }
+  .hoje .sensacao { grid-column: 1; grid-row: 2; }
+  .hoje .uv { grid-column: 2; grid-row: 2; }
+  .hoje .tempo-dia { grid-column: 1 / -1; grid-row: 3; }
+  .tempo-dia .numeros { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .hoje { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.05fr) minmax(0, 0.95fr) minmax(0, 0.9fr); }
+  .hoje .alerta { grid-column: 1; grid-row: 1; }
+  .hoje .sensacao { grid-column: 2; grid-row: 1; }
+  .hoje .tempo-dia { grid-column: 3; grid-row: 1; }
+  .hoje .uv { grid-column: 4; grid-row: 1; }
+  .tempo-dia .numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Faixa de cinco dias: seleção visível e alvos de toque amplos. */
+.dias { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dia { min-height: 216px; text-align: left; font: inherit; color: inherit; background: var(--superficie); border: 1px solid var(--borda); border-radius: 17px;
+  padding: 15px; cursor: pointer; display: flex; flex-direction: column; gap: 7px; min-width: 0; box-shadow: var(--sombra-leve); transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out; }
+.dia:hover { transform: translateY(-2px); border-color: var(--marca); box-shadow: var(--sombra); }
+.dia:active { transform: translateY(0); }
+.dia[aria-pressed="true"] { background: var(--selecao); border: 2px solid var(--marca); padding: 14px; box-shadow: var(--sombra); }
+.dia .cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 8px; width: 100%; }
+.dia .cab b { font-family: var(--f-titulo); font-size: 17px; }
+.dia .cab span { font-size: 13px; color: var(--tinta2); }
+.chip { justify-self: start; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px 4px 4px; font-size: 13px; font-weight: 750; }
+.chip i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; background: rgba(255, 255, 255, 0.68); }
+.dia .chip { font-size: 12px; padding: 3px 9px 3px 3px; gap: 4px; max-width: 100%; }
+.dia .chip i { width: 19px; height: 19px; font-size: 11px; }
+.dia .sens span { display: block; font-size: 12px; color: var(--tinta2); line-height: 1.2; }
+.dia .sens div { display: flex; align-items: center; gap: 8px; }
+.dia .sens strong { font-size: clamp(28px, 1.2vw + 20px, 36px); font-weight: 650; line-height: 1.1; }
+.dia .sens .pt { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.dia .cond { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 1.3; }
+.dia .info { font-size: 12px; color: var(--tinta2); line-height: 1.45; }
+.dia .uv-dia { align-self: flex-start; margin-top: auto; border-radius: 4px; padding: 2px 6px; font-size: 12px; font-weight: 650; }
+.marca-noite { align-self: flex-start; font-size: 11px; font-weight: 650; border-radius: 4px; padding: 2px 7px; background: var(--lavagem); color: var(--tinta2); }
+@media (min-width: 760px) { .dias { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+.graficos { display: grid; gap: 18px; }
+.cartao-topo { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px; }
+.cartao h3 { margin: 0; font-size: clamp(18px, 0.4vw + 16px, 22px); line-height: 1.3; }
+.cartao .nota { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--tinta2); }
+.btn-tabela { flex: none; min-height: 44px; border: 1px solid var(--borda); background: var(--plano); color: var(--tinta2); border-radius: 999px;
+  padding: 8px 15px; font: 600 13px/1.2 var(--f-corpo); cursor: pointer; transition: background-color 150ms ease-out, color 150ms ease-out; }
+.btn-tabela:hover, .btn-tabela[aria-pressed="true"] { background: var(--marca); color: #f4ffff; }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--tinta2); margin: 0 0 8px; }
+.controles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 10px 0 14px; }
+.controles .rot { font-size: 13px; font-weight: 600; color: var(--tinta2); }
+.alternar { display: flex; flex-wrap: wrap; gap: 7px; }
+.alternar button { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--borda); background: var(--superficie); color: var(--tinta);
+  border-radius: 999px; padding: 8px 13px; font: 600 13px/1.2 var(--f-corpo); cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out; }
+.alternar button:hover { background: var(--lavagem); border-color: var(--marca); }
+.alternar button[aria-pressed="false"] { color: var(--muda); background: transparent; }
+.alternar button[aria-pressed="false"] i { opacity: 0.25; }
+.segmentado.modelo { margin: 0; }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.k-linha { width: 18px; height: 2px; display: inline-block; border-radius: 1px; }
+.k-tracejada { background: transparent !important; border-top: 2px dashed currentColor; height: 0 !important; }
+.k-caixa { width: 12px; height: 12px; display: inline-block; border-radius: 3px; }
+.grafico svg { display: block; overflow: visible; max-width: 100%; }
+.eixo text { fill: var(--muda); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.vista-tabela { max-height: 400px; overflow: auto; border: 1px solid var(--borda); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--grade); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { position: sticky; top: 0; background: var(--superficie); color: var(--tinta2); font-weight: 650; z-index: 1; }
+.pilula { display: inline-block; border-radius: 4px; padding: 2px 7px; font-weight: 650; }
+
+.niveis { display: grid; gap: 12px 18px; grid-template-columns: minmax(0, 1fr); }
+.nivel-linha { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 6px 16px; align-items: start; align-content: start; padding: 18px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 16px; box-shadow: var(--sombra-leve); }
+.nivel-linha .chip { grid-row: span 2; }
+.nivel-linha p, .nivel-linha ul { margin: 0; font-size: 14px; }
+.nivel-linha ul { padding-left: 18px; }
+.nota-dias { font-size: 14px; color: var(--tinta2); max-width: 75ch; }
+.cuidados { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.cuidados > div { background: var(--superficie); border: 1px solid var(--borda); border-radius: 18px; padding: 20px; box-shadow: var(--sombra-leve); }
+.cuidados h3 { margin: 0 0 8px; font-size: 19px; }
+.cuidados ul { margin: 0; padding-left: 20px; font-size: 15px; }
+.cuidados li + li { margin-top: 6px; }
+@media (min-width: 620px) { .niveis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cuidados { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .nivel-linha { grid-template-columns: minmax(0, 1fr); } .nivel-linha .chip { grid-row: auto; } }
+
+details.tecnico { background: var(--superficie); border: 1px solid var(--borda); border-radius: 18px; padding: 16px 20px; margin-top: clamp(32px, 4vw, 52px); box-shadow: var(--sombra-leve); }
+details.tecnico summary { min-height: 44px; cursor: pointer; font-family: var(--f-titulo); font-weight: 650; font-size: 19px; }
+details.tecnico p, details.tecnico li { font-size: 14px; max-width: 75ch; }
+details.tecnico .vista-tabela td:first-child, details.tecnico .vista-tabela th:first-child { position: sticky; left: 0; background: var(--superficie); z-index: 1; }
+details.tecnico code { font-size: 14px; overflow-wrap: anywhere; }
+.segmentado { display: inline-flex; flex-wrap: wrap; gap: 4px; border: 1px solid var(--borda); border-radius: 12px; padding: 4px; margin: 10px 0; background: var(--plano); }
+.segmentado button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 9px; background: transparent; color: var(--tinta2); font: 600 13px/1.2 var(--f-corpo); padding: 8px 14px; cursor: pointer; transition: background-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out; }
+.segmentado button:hover { color: var(--marca); }
+.segmentado button[aria-pressed="true"] { background: var(--superficie); color: var(--tinta); font-weight: 700; box-shadow: 0 2px 8px rgba(11,59,76,.12); }
+
+#tooltip { position: fixed; z-index: 10; pointer-events: none; background: var(--superficie); color: var(--tinta); border: 1px solid var(--borda);
+  border-radius: 6px; box-shadow: var(--sombra); padding: 9px 11px; font-size: 13px; max-width: 290px; }
+#tooltip .t { color: var(--tinta2); margin-bottom: 3px; }
+#tooltip .l { display: flex; gap: 8px; align-items: center; }
+#tooltip .l strong { font-variant-numeric: tabular-nums; }
+#tooltip .l span { color: var(--tinta2); }
+footer { background: #082f3d; color: #e5f4f3; margin-top: 8px; border-top: 3px solid var(--laranja); }
+footer .largura { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; padding-block: 28px 34px; }
+footer img { width: clamp(104px, 10vw, 140px); height: auto; flex: none; }
+footer .creditos { flex: 1 1 340px; font-size: 14px; line-height: 1.6; }
+footer .creditos p { margin: 0 0 10px; max-width: 75ch; }
+footer a { color: #f8f8f8; }
+footer .emergencia { font-size: 16px; }
+:focus-visible { outline: 3px solid var(--acento); outline-offset: 3px; }
+::selection { background: var(--marca); color: #f4ffff; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition-duration: 0.01ms !important; } }
+@media (max-width: 520px) {
+  .largura { width: min(100% - 24px, 1480px); }
+  .cabecalho .largura { gap: 12px 14px; }
+  .cabecalho .marca { width: 48px; }
+  .cabecalho .titulos { flex-basis: 220px; }
+  .cabecalho .acoes { width: 100%; justify-content: space-between; }
+  .atalhos .largura { gap: 0 16px; }
+  .atalhos a { font-size: 13px; }
+  .hoje > article { padding: 20px 18px; }
+  .alerta .rodape-alerta { align-items: stretch; flex-direction: column; }
+  .alerta .quando { margin-left: 0; align-self: flex-end; }
+  .cartao-topo { flex-direction: column; }
+  .btn-tabela { align-self: flex-end; }
+  .cartao-topo > div { padding-right: 0; }
+  .horas span { display: block; }
+  .horas .ponto-faixa { margin-bottom: 3px; }
+}
+@media print {
+  .faixa-inst, .atalhos, .cabecalho .acoes, .btn-tabela, .compartilhar, details.tecnico { display: none !important; }
+  .cabecalho, footer { background: #f8f8f8; color: #1d1c1a; }
+  .cabecalho h1, .cabecalho .sub, .cabecalho .sobre, footer a { color: #1d1c1a; }
+}
+</style>
+</head>
+<body>
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+<div class="faixa-inst">
+  <div class="largura"><img src="img/instituicoes.jpg" width="1413" height="234"
+    alt="Diretoria de Vigilância em Saúde (SMS/PMPA), Sistema Único de Saúde e Prefeitura de Porto Alegre – Secretaria de Saúde"></div>
+</div>
+<header class="cabecalho">
+  <div class="largura">
+    <img class="marca" src="img/cisc-marca.png" width="285" height="289" alt="CISC">
+    <div class="titulos">
+      <p class="sobre">CISC · Centro de Informação em Saúde e Clima</p>
+      <h1>Painel de Calor de Porto Alegre</h1>
+      <p class="sub">Alertas, sensação térmica e proteção para os próximos 5 dias</p>
+    </div>
+    <div class="acoes">
+      <span class="atualizado" id="atualizado"></span>
+      <button class="btn" id="tema" type="button">Tema escuro</button>
+    </div>
+  </div>
+</header>
+<nav class="atalhos" aria-label="Seções do painel">
+  <div class="largura">
+    <a href="#hoje">Hoje</a><a href="#proximos-dias">Próximos dias</a><a href="#hora-a-hora">Hora a hora</a><a href="#cuidados">Cuidados</a><a href="#tecnico">Como calculamos</a>
+  </div>
+</nav>
+
+<main class="largura" id="conteudo" tabindex="-1">
+  <div id="aviso-dados" class="aviso-dados" hidden></div>
+
+  <section class="hoje" id="hoje" aria-live="polite" aria-label="Alerta e condições do dia escolhido">
+    <article class="alerta" id="alerta"></article>
+    <article class="sensacao" id="sensacao"></article>
+    <article class="tempo-dia" id="tempo-dia"></article>
+    <article class="uv" id="uv"></article>
+  </section>
+
+  <section class="secao" id="proximos-dias" aria-labelledby="titulo-dias">
+    <div class="cab-secao"><h2 id="titulo-dias">Próximos dias</h2><p>Escolha um dia para atualizar o alerta, a UTCI, o índice UV e os gráficos.</p></div>
+    <div class="dias" id="dias" role="group" aria-label="Escolha o dia"></div>
+  </section>
+
+  <section class="secao" id="hora-a-hora" aria-labelledby="titulo-horas">
+    <div class="cab-secao"><h2 id="titulo-horas">Sensação térmica hora a hora</h2><p>Compare a sensação térmica com a temperatura do ar e consulte os valores em gráfico ou tabela.</p></div>
+    <div class="graficos">
+      <figure class="cartao" style="margin:0">
+        <div class="cartao-topo">
+          <div>
+            <h3>A sensação térmica (UTCI) é o que aciona os alertas</h3>
+            <p class="nota">A UTCI junta temperatura, umidade, vento e sol. Ative um ou mais modelos para comparar as linhas: <strong>contínua para UTCI</strong> e <strong>tracejada para temperatura do ar</strong>. As faixas coloridas são os limites do protocolo.</p>
+          </div>
+          <button class="btn-tabela" type="button" data-tabela="graf-calor" aria-pressed="false">Tabela</button>
+        </div>
+        <div class="controles">
+          <span class="rot">Modelos · escolha um ou mais:</span>
+          <div class="segmentado modelo" id="modelo-calor" role="group" aria-label="Modelo do gráfico de sensação térmica"></div>
+          <div class="alternar" id="legenda-calor" role="group" aria-label="Mostrar ou esconder linhas"></div>
+        </div>
+        <div class="legenda" id="faixas-calor"></div>
+        <div class="grafico" id="graf-calor"></div>
+      </figure>
+      <figure class="cartao" style="margin:0">
+        <div class="cartao-topo">
+          <div>
+            <h3>Chuva prevista (mm por hora)</h3>
+            <p class="nota">Os dois modelos lado a lado, hora a hora, no centro de Porto Alegre. Toque em um modelo para mostrar ou esconder.</p>
+          </div>
+          <button class="btn-tabela" type="button" data-tabela="graf-chuva" aria-pressed="false">Tabela</button>
+        </div>
+        <div class="controles"><div class="alternar" id="legenda-chuva" role="group" aria-label="Mostrar ou esconder modelos"></div></div>
+        <div class="grafico" id="graf-chuva"></div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="secao" id="entenda-niveis" aria-labelledby="titulo-niveis">
+    <div class="cab-secao"><h2 id="titulo-niveis">O que significa cada nível</h2><p>O alerta considera a intensidade, a duração do calor e a recuperação do corpo entre um dia e outro.</p></div>
+    <div class="niveis" id="niveis"></div>
+    <p class="nota-dias">Com madrugadas amenas, a Atenção só começa no segundo dia de calor; o nível sobe quando o calor se repete, começa um dia antes quando um dia de calor forte está chegando e só baixa aos poucos depois de um dia de alerta.</p>
+  </section>
+
+  <section class="secao" id="cuidados" aria-labelledby="titulo-cuidados">
+    <div class="cab-secao"><h2 id="titulo-cuidados">Cuidados no calor</h2><p>Medidas simples reduzem o risco. Pessoas mais vulneráveis precisam de atenção redobrada.</p></div>
+    <div class="cuidados">
+      <div><h3>Para todos</h3><ul><li>Beba água ao longo do dia, mesmo sem sede.</li><li>Prefira roupas leves e claras; use chapéu e protetor solar.</li><li>Evite esforço físico nas horas mais quentes.</li><li>Busque sombra e lugares ventilados ou climatizados.</li></ul></div>
+      <div><h3>Quem precisa de mais atenção</h3><ul><li>Pessoas idosas e crianças pequenas.</li><li>Gestantes.</li><li>Pessoas com doenças do coração, pressão alta, diabetes, problemas renais ou transtornos mentais.</li><li>Trabalhadores ao ar livre e pessoas em situação de rua.</li></ul></div>
+      <div><h3>Sinais de alerta</h3><ul><li>Tontura, dor de cabeça, náusea, cãibras, confusão, pele quente e seca.</li><li>Leve a pessoa para um lugar fresco, ofereça água e afrouxe as roupas.</li><li>Se não melhorar, procure atendimento. Emergência: <strong>SAMU 192</strong>.</li></ul></div>
+    </div>
+  </section>
+
+  <details class="tecnico" id="tecnico">
+    <summary>Como calculamos · detalhes técnicos</summary>
+    <p>Valores mínimos e máximos de cada dia, por modelo, com o horário entre parênteses. Cores das faixas: as do protocolo (IBUTG em escala ocupacional, ISO 7243 e NR-15).</p>
+    <div class="segmentado" id="modelo-tec" role="group" aria-label="Modelo"></div>
+    <div class="vista-tabela" id="tabela-tec" style="max-height:none"></div>
+    <h3 style="font-size:17px;margin:20px 0 8px">Como o nível de calor é calculado</h3>
+    <ul>
+      <li>Sensação térmica (UTCI) do consenso multimodelo: média do ECMWF/IFS e do NOAA/GFS, no centro de Porto Alegre (−30,08; −51,21).</li>
+      <li>Nível 5: UTCI ≥ 48 °C por mais de 1 hora. Nível 4: ≥ 38 °C por mais de 2 horas. Nível 3: ≥ 34 °C por mais de 2 horas.</li>
+      <li>Nível 2: UTCI ≥ 32 °C por 4 horas ou ≥ 28 °C por 7 horas. Com madrugada (0h–6h) quente, ≥ 22 °C, vale já no 1º dia; com madrugada amena, de 20 a 22 °C, a partir do 2º dia seguido de calor; com madrugada abaixo de 20 °C, o dia fica em Nível 1.</li>
+      <li>Atenuação de N3 para N2: exige no máximo 3 horas de UTCI ≥ 34 °C, pico abaixo de 36,5 °C, IBUTG abaixo de 28 °C e madrugada abaixo de 18,5 °C.</li>
+      <li>Rampa: um dia em Nível 1 com UTCI máxima ≥ 30 °C sobe para Nível 2 se o dia seguinte for Nível 3 ou mais.</li>
+      <li>Acúmulo: Nível 2 por mais de 3 dias seguidos vira Nível 3; Nível 3 por mais de 2 dias vira Nível 4; Nível 4 por 2 dias vira Nível 5.</li>
+      <li>Rescaldo: depois de um dia em Nível 3 ou mais, um dia que cairia para Nível 1 fica em Nível 2.</li>
+      <li>As regras entre dias consideram também os 3 dias anteriores. O horário crítico é o do nível final do dia.</li>
+      <li>Chuva: estabilidade pela chuva no centro e na vizinhança de 55 km e pela probabilidade de chuva diária ≥ 10, 25 e 50 mm em algum ponto da vizinhança (NMEP), com os ensembles NOAA/GFS e ECMWF/IFS.</li>
+    </ul>
+    <h3 style="font-size:17px;margin:20px 0 8px">Como o índice UV é definido</h3>
+    <ul>
+      <li>A definição científica é <code>UVI = 40 × E<sub>er</sub></code>, com <code>E<sub>er</sub></code> em W/m². A irradiância eritematosa é <code>E<sub>er</sub> = ∫ E<sub>λ</sub> · s<sub>er</sub>(λ) dλ</code>: o espectro solar é ponderado pela curva de eritema da CIE (McKinlay–Diffey; ISO 17166 / CIE S 007).</li>
+      <li>O painel <strong>não estima UV pela temperatura nem pela radiação solar total</strong>. Usa a previsão horária de UVI do NOAA/GFS, distribuída pela Open-Meteo como média da hora anterior, incluindo o efeito das nuvens. O máximo diário é o maior desses valores horários (resolução de 1 hora). O ECMWF/IFS aberto não fornece essa variável.</li>
+      <li>Para o público, a OMS recomenda apresentar o máximo diário como inteiro mais próximo. Categorias: 0–2 Baixo; 3–5 Moderado; 6–7 Alto; 8–10 Muito alto; 11 ou mais Extremo. As recomendações de proteção seguem o mesmo guia.</li>
+      <li>Referências: <a href="https://www.who.int/publications/i/item/9241590076" target="_blank" rel="noopener">OMS — Global Solar UV Index: A Practical Guide (2002)</a>; McKinlay e Diffey (1987), espectro de ação do eritema; <a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener">documentação da Open-Meteo</a>.</li>
+    </ul>
+    <p>Demais métodos: UTCI (Fiala et al., 2012; Bröde et al., 2012), temperatura radiante média no esquema ERA5-HEAT (Di Napoli et al., 2020), IBUTG (ISO 7243:2017), taxa metabólica admissível (NR-15, Anexo 3) e orientações da OMM (WMO-No. 1142).</p>
+  </details>
+</main>
+
+<footer>
+  <div class="largura">
+    <img src="img/cisc-logo.png" width="350" height="420" alt="CISC – Centro de Informação em Saúde e Clima">
+    <div class="creditos">
+      <p><strong>Painel de Calor de Porto Alegre</strong>, desenvolvido pelo CISC – Centro de Informação em Saúde e Clima.</p>
+      <p>Previsão: modelos ECMWF/IFS e NOAA/GFS, via <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0), atualizada automaticamente a cada 3 horas. Previsões têm incerteza, que aumenta nos dias mais distantes.</p>
+      <p class="emergencia"><strong>Emergência:</strong> SAMU <strong>192</strong> · Defesa Civil <strong>199</strong> · Bombeiros <strong>193</strong></p>
+    </div>
+  </div>
+</footer>
+<div id="tooltip" hidden></div>
+<script src="lib/d3.min.js?v=dev"></script>
+<script src="dados/previsao.js?v=dev"></script>
+<script src="app.js?v=dev"></script>
+</body>
+</html>
